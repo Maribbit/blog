@@ -1,0 +1,116 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Maribbit's Blog 3D | 海兔的 3D 博客">
+  <main>
+    <header class="page-header">
+      <h1>海兔的 3D 博客</h1>
+      <p>探索 AI 驱动的前端 3D 编程</p>
+    </header>
+
+    <section class="viewer-section">
+      <div class="canvas-wrapper">
+        <canvas id="model-canvas"></canvas>
+        <div class="loading-hint" id="loading-hint">模型加载中…</div>
+      </div>
+      <p class="hint-text">拖拽旋转 · 滚轮缩放 · 右键平移</p>
+    </section>
+  </main>
+</Layout>
+
+<script>
+  import { initModelViewer } from '../scripts/model-viewer.js';
+
+  // Wait for the canvas to have proper dimensions
+  const canvas = document.getElementById('model-canvas');
+  const loadingHint = document.getElementById('loading-hint');
+
+  function startViewer() {
+    initModelViewer('model-canvas', '/models/Body.glb');
+    // Hide the loading hint once the viewer is initialized
+    // (The model itself loads asynchronously inside the viewer)
+    if (loadingHint) {
+      loadingHint.style.opacity = '0';
+      setTimeout(() => loadingHint?.remove(), 500);
+    }
+  }
+
+  // Ensure the canvas has a non-zero size before initializing
+  if (canvas && canvas.clientWidth > 0) {
+    startViewer();
+  } else {
+    requestAnimationFrame(startViewer);
+  }
+</script>
+
+<style>
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7b8cff, #c77bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header p {
+    font-size: 1.1rem;
+    color: #9999aa;
+  }
+
+  .viewer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  #model-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .loading-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #8888aa;
+    font-size: 0.95rem;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+
+  .hint-text {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #666677;
+  }
+</style>
