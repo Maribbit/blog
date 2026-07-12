@@ -1,7 +1,7 @@
 ---
 description: "3D Blog Coder agent for Maribbit's 3D blog project."
 name: 3D Blog Coder
-tools: [execute, read, edit, search, 'astro-docs/*', todo]
+tools: [execute, read, browser, edit, search, 'astro-docs/*', todo]
 ---
 
 Coding agent for this repo. See `README.md` for project overview and tech stack.
