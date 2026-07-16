@@ -1,131 +1,132 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Character from '../components/Character.astro';
+import Bookshelf from '../components/Bookshelf.astro';
+import WallClock from '../components/WallClock.astro';
+import Overlays from '../components/Overlays.astro';
 ---
 
 <Layout title="Maribbit's Blog 2.5D | 海兔的 2.5D 博客">
-  <div class="stage">
-    <!-- Character card -->
-    <div class="card">
-      <div class="card__character">
-        <img src="/character/Character_T_Pose.svg" alt="Maribbit T-Pose" class="character-svg" />
-      </div>
-      <div class="card__info">
-        <div class="card__label">CHARACTER</div>
-        <h1 class="card__title">海兔 / Maribbit</h1>
-        <div class="card__meta">
-          <span>AGE 26</span>
-          <span class="card__sep">·</span>
-          <span>172cm</span>
-        </div>
-      </div>
+  <main class="room">
+    <div class="wall"></div>
+    <div class="floor"></div>
+
+    <!-- Wall clock, synced to the current time -->
+    <div class="obj obj--clock">
+      <WallClock />
     </div>
 
-    <!-- Footer hint -->
-    <div class="footer-hint">
-      <span class="footer-hint__dot"></span>
-      <span>2.5D Blog · 海兔</span>
+    <!-- Bookshelf behind the character, offset for depth -->
+    <div class="obj obj--shelf">
+      <div class="contact-shadow contact-shadow--shelf"></div>
+      <Bookshelf />
     </div>
-  </div>
+
+    <!-- Character, front and center. Clicking her opens the About view. -->
+    <div
+      class="obj obj--character"
+      data-nav="about"
+      role="button"
+      tabindex="0"
+      aria-label="关于海兔"
+    >
+      <div class="contact-shadow contact-shadow--character"></div>
+      <Character />
+    </div>
+
+    <Overlays />
+  </main>
 </Layout>
 
 <style>
-  .stage {
+  .room {
     position: fixed;
     inset: 0;
-    width: 100vw;
-    height: 100vh;
-    background: var(--color-bg-deep);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+    overflow: hidden;
   }
 
-  .card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
+  .wall {
+    position: absolute;
+    inset: 0 0 26% 0;
+    background: var(--color-bg);
   }
 
-  .card__character {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: clamp(280px, 45vh, 500px);
-    height: clamp(340px, 55vh, 620px);
-    background: var(--color-surface);
-    border-radius: 1.25rem;
-    border: 1px solid var(--color-line);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    padding: 1.25rem;
-    transition: box-shadow 0.3s ease;
+  .floor {
+    position: absolute;
+    inset: 74% 0 0 0;
+    background: var(--color-floor);
+    box-shadow: inset 0 1px 0 var(--color-line);
   }
 
-  .card__character:hover {
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  .obj {
+    position: absolute;
   }
 
-  .character-svg {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+  /* Character: centered, standing on the floor line */
+  .obj--character {
+    left: 50%;
+    bottom: 2vh;
+    height: 82vh;
+    aspect-ratio: 1108 / 1380;
+    transform: translateX(-50%);
+    z-index: 20;
+    cursor: pointer;
   }
 
-  .card__info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
+  /* Bookshelf: back-left, smaller for depth */
+  .obj--shelf {
+    left: 12%;
+    bottom: 24vh;
+    height: 42vh;
+    aspect-ratio: 260 / 360;
+    z-index: 10;
   }
 
-  .card__label {
-    font-size: 0.7rem;
-    letter-spacing: 0.22em;
-    color: var(--color-text-dim);
-    text-transform: uppercase;
+  /* Clock: upper-right on the wall */
+  .obj--clock {
+    right: 12%;
+    top: 12vh;
+    width: clamp(90px, 12vh, 150px);
+    aspect-ratio: 1 / 1;
+    z-index: 10;
   }
 
-  .card__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    color: var(--color-text);
-  }
-
-  .card__meta {
-    display: flex;
-    gap: 0.45rem;
-    font-size: 0.82rem;
-    color: var(--color-text-dim);
-    letter-spacing: 0.08em;
-    font-feature-settings: 'tnum' 1, 'ss01' 1;
-  }
-
-  .card__sep {
-    color: var(--color-line);
-  }
-
-  .footer-hint {
-    position: fixed;
-    bottom: 1.6rem;
+  /* Grounding shadows */
+  .contact-shadow {
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.78rem;
-    color: var(--color-text-dim);
-    letter-spacing: 0.08em;
-    user-select: none;
+    background: radial-gradient(
+      ellipse at center,
+      var(--color-shadow) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
   }
 
-  .footer-hint__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 0 8px var(--color-accent);
+  .contact-shadow--character {
+    bottom: 1vh;
+    width: 46%;
+    height: 5vh;
+  }
+
+  .contact-shadow--shelf {
+    bottom: -2vh;
+    width: 84%;
+    height: 4vh;
+  }
+
+  @media (max-width: 720px) {
+    .obj--character {
+      height: 66vh;
+    }
+    .obj--shelf {
+      left: 4%;
+      height: 34vh;
+      bottom: 20vh;
+    }
+    .obj--clock {
+      right: 6%;
+    }
   }
 </style>

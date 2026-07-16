@@ -1,0 +1,155 @@
+---
+// Original T-pose, rendered inline so we can animate its named groups.
+// No pose transform: the sleeves are fused into the coat path and can't be
+// cleanly rigged from this asset (see the separation guidance in chat).
+// Life signs instead: a subtle breathing motion + randomized blinking.
+import charSvg from '../../public/character/Character_T_Pose.svg?raw';
+---
+
+<div class="character" aria-hidden="true">
+  <Fragment set:html={charSvg} />
+</div>
+
+<style>
+  .character {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .character :global(svg) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    overflow: visible;
+    filter: drop-shadow(0 8px 14px var(--color-shadow));
+  }
+
+  /* Breathing is driven part-by-part, not by floating the whole figure.
+     Two decoupled motions so the head doesn't inflate with the chest:
+
+     1) TORSO (chest + shoulders + arms): expands from the diaphragm (~y730).
+        The ribcage widens (scaleX) and the shoulders rise (scaleY + lift).
+        This is the real "breath" and carries the larger amplitude.
+     2) HEAD (+ hair clips): NO scaling — it only rides a small vertical lift,
+        with a lower amplitude and a slightly later peak, so it *follows* the
+        chest like a head sitting on a rising ribcage rather than breathing
+        on its own. */
+  .character :global(#Dress),
+  .character :global(#SailorCollar),
+  .character :global(#Coat_R),
+  .character :global(#Coat_L),
+  .character :global(#Hand_R),
+  .character :global(#Hand_L) {
+    transform-box: view-box;
+    transform-origin: 553px 730px;
+    animation: breathe-torso 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  .character :global(#Head),
+  .character :global(#Hair_Accessory) {
+    transform-box: view-box;
+    transform-origin: 553px 320px; /* base of the neck */
+    animation: breathe-head 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  /* Asymmetric timing: a quicker inhale, a brief hold, then a slower exhale. */
+  @keyframes breathe-torso {
+    0% {
+      transform: scaleX(1) scaleY(1) translateY(0);
+    }
+    34% {
+      transform: scaleX(1.008) scaleY(1.0075) translateY(-1.3px);
+    }
+    46% {
+      transform: scaleX(1.0068) scaleY(1.0064) translateY(-1px);
+    }
+    100% {
+      transform: scaleX(1) scaleY(1) translateY(0);
+    }
+  }
+
+  /* Head: smaller lift, peak lags the torso (40% vs 34%) for a natural follow. */
+  @keyframes breathe-head {
+    0% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-2.4px);
+    }
+    52% {
+      transform: translateY(-2px);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  /* Blink pivots: eye centers in the SVG's own coordinate space. */
+  .character :global(#Eye_R) {
+    transform-box: view-box;
+    transform-origin: 511px 154px;
+  }
+
+  .character :global(#Eye_L) {
+    transform-box: view-box;
+    transform-origin: 595px 154px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .character :global(#Head),
+    .character :global(#Hair_Accessory),
+    .character :global(#SailorCollar),
+    .character :global(#Dress),
+    .character :global(#Coat_R),
+    .character :global(#Coat_L),
+    .character :global(#Hand_R),
+    .character :global(#Hand_L) {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  function setupCharacter() {
+    const eyes = [
+      document.getElementById('Eye_R'),
+      document.getElementById('Eye_L'),
+    ].filter((el): el is HTMLElement => el !== null);
+
+    if (!eyes.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // One blink = a quick vertical squash and release of both eyes.
+    function blink() {
+      for (const eye of eyes) {
+        eye.animate(
+          [
+            { transform: 'scaleY(1)' },
+            { transform: 'scaleY(0.06)', offset: 0.5 },
+            { transform: 'scaleY(1)' },
+          ],
+          { duration: 170, easing: 'ease-in-out' }
+        );
+      }
+    }
+
+    // Schedule blinks at irregular intervals; sometimes a quick double blink.
+    function scheduleNext() {
+      const delay = 2200 + Math.random() * 4200; // 2.2s - 6.4s
+      window.setTimeout(() => {
+        blink();
+        if (Math.random() < 0.28) window.setTimeout(blink, 280);
+        scheduleNext();
+      }, delay);
+    }
+
+    scheduleNext();
+  }
+
+  setupCharacter();
+</script>

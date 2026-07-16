@@ -21,14 +21,16 @@ const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
 
 <style is:global>
   :root {
-    /* Cold, desaturated palette inspired by the character sheet */
-    --color-bg: #2a2a35;
-    --color-bg-deep: #1c1c25;
-    --color-text: #e8e8ee;
-    --color-text-dim: #9a9aa8;
-    --color-line: #5a5a6a;
-    --color-accent: #c24545; /* single warm accent — the eye color */
-    --color-surface: #22222e;
+    /* Cool, clean, airy palette. The character is desaturated cool-gray, so the
+       room reads fresher on a neutral blue-gray rather than a warm beige. */
+    --color-bg: #edf1f2; /* wall */
+    --color-floor: #dde5e6; /* ground band */
+    --color-line: #c2cacd;
+    --color-text: #2d3338;
+    --color-text-dim: #79838a;
+    --color-accent: #94231f; /* single warm accent — the eye color */
+    --color-surface: #eef2f3; /* frosted window base */
+    --color-shadow: rgba(34, 46, 54, 0.13);
   }
 
   * {
@@ -48,5 +50,15 @@ const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
       'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 </style>

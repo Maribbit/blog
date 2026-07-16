@@ -1,0 +1,64 @@
+---
+// Minimal wall clock. Hands are rotated to the live system time by the script.
+---
+
+<div class="clock" role="img" aria-label="与当前时间同步的时钟">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <!-- Angular hexagonal face (no rounded corners) -->
+    <polygon points="60,4 108.5,32 108.5,88 60,116 11.5,88 11.5,32"
+      fill="#eef2f3" stroke="#c2cacd" stroke-width="3" stroke-linejoin="miter" />
+    <!-- Ticks: 12 / 3 / 6 / 9 (sharp rectangles) -->
+    <rect x="58.5" y="14" width="3" height="10" fill="#79838a" />
+    <rect x="58.5" y="96" width="3" height="10" fill="#79838a" />
+    <rect x="94" y="58.5" width="10" height="3" fill="#79838a" />
+    <rect x="16" y="58.5" width="10" height="3" fill="#79838a" />
+
+    <!-- Hands (sharp rectangles; all pivot at the center 60,60) -->
+    <rect id="hand-hour" x="58" y="36" width="4" height="28" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 60px 60px;" />
+    <rect id="hand-minute" x="58.8" y="24" width="2.4" height="40" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 60px 60px;" />
+    <rect id="hand-second" x="59.4" y="20" width="1.2" height="46" fill="#94231f"
+      style="transform-box: view-box; transform-origin: 60px 60px;" />
+    <!-- Center hub: a small diamond -->
+    <rect x="55" y="55" width="10" height="10" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 60px 60px; transform: rotate(45deg);" />
+  </svg>
+</div>
+
+<style>
+  .clock {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 5px 9px var(--color-shadow));
+  }
+
+  .clock svg {
+    width: 100%;
+    height: 100%;
+  }
+</style>
+
+<script>
+  const hour = document.getElementById('hand-hour');
+  const minute = document.getElementById('hand-minute');
+  const second = document.getElementById('hand-second');
+
+  function tick() {
+    const now = new Date();
+    const s = now.getSeconds();
+    const m = now.getMinutes();
+    const h = now.getHours() % 12;
+
+    const secDeg = s * 6;
+    const minDeg = m * 6 + s * 0.1;
+    const hourDeg = h * 30 + m * 0.5;
+
+    if (hour) hour.style.transform = `rotate(${hourDeg}deg)`;
+    if (minute) minute.style.transform = `rotate(${minDeg}deg)`;
+    if (second) second.style.transform = `rotate(${secDeg}deg)`;
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
