@@ -25,3 +25,6 @@ pnpm-debug.log*
 
 # temporary files
 tmp/
+
+# agent-generated screenshots
+screenshots/
