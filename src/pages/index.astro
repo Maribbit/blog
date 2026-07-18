@@ -1,28 +1,53 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Character from '../components/Character.astro';
-import Bookshelf from '../components/Bookshelf.astro';
 import WallClock from '../components/WallClock.astro';
+import Books from '../components/Books.astro';
 import Overlays from '../components/Overlays.astro';
+import OpenWindow from '../components/OpenWindow.astro';
+import WindowView from '../components/WindowView.astro';
 ---
 
 <Layout title="Maribbit's Blog 2.5D | 海兔的 2.5D 博客">
   <main class="room">
     <div class="wall"></div>
-    <div class="floor"></div>
 
-    <!-- Wall clock, synced to the current time -->
-    <div class="obj obj--clock">
-      <WallClock />
+    <!--
+      Layout: a flat stage where the character, the window (and therefore
+      the windowsill), the clock, and the books are all sized and
+      positioned in absolute pixels. Nothing is vh/vw-relative.
+
+      The room container is `position:fixed` with `overflow:hidden`, so
+      anything that extends past the viewport is just clipped.
+
+      Concrete numbers:
+        - Character canvas: 453 x 1380 (so width = height * 453/1380)
+        - Character height: 720px (width 236.4px), bottom: 0
+        - Character wrist in canvas y: 693.478 / 1380 ≈ 0.5025 from top
+        - Window width: 720px, height: 388.7px (frame aspect 1786/964)
+        - Window top is computed so the windowsill's bottom edge lands
+          on the character's wrist
+        - Windowsill is part of the window SVG (with its own overhang and
+          colors); the clock and books sit on top of it.
+    -->
+    <div class="obj obj--window">
+      <div class="window-view-slot">
+        <WindowView />
+      </div>
+      <OpenWindow />
+
+      <!-- Items on the windowsill. They sit in front of the sill, behind
+           the character. Both are positioned against the window element
+           so they travel with it. -->
+      <div class="sill sill--clock">
+        <WallClock />
+      </div>
+      <div class="sill sill--books">
+        <Books />
+      </div>
     </div>
 
-    <!-- Bookshelf behind the character, offset for depth -->
-    <div class="obj obj--shelf">
-      <div class="contact-shadow contact-shadow--shelf"></div>
-      <Bookshelf />
-    </div>
-
-    <!-- Character, front and center. Clicking her opens the About view. -->
+    <!-- Character, front and center. -->
     <div
       class="obj obj--character"
       data-nav="about"
@@ -47,52 +72,143 @@ import Overlays from '../components/Overlays.astro';
 
   .wall {
     position: absolute;
-    inset: 0 0 26% 0;
-    background: var(--color-bg);
-  }
-
-  .floor {
-    position: absolute;
-    inset: 74% 0 0 0;
-    background: var(--color-floor);
-    box-shadow: inset 0 1px 0 var(--color-line);
+    inset: 0;
+    /* Cool gray-white stone. Built from three SVG noise tiles layered on
+       a flat base color:
+         1. Mid-frequency speckle — the dominant "stone" character:
+            visible grains and small voids.
+         2. Low-frequency large blotches — uneven mineral tone, not a
+            uniform paint.
+         3. High-frequency fine grain — the sandpaper feel.
+       Each tile is 360×360; the noise is deterministic per-tile, and
+       the strong grain layer hides the boundaries. A few hand-placed
+       darker mineral spots break up the repeat further. The base color
+       (#edf1f2) bleeds through everywhere. */
+    background-color: var(--color-bg);
+    background-image:
+      /* mid-frequency speckle (the dominant stone look) */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.18' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0.38  0 0 0 0 0.44  0 0 0 0 0.50  0 0 0 0.32 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      /* low-frequency large blotches (mineral color variation) */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='2' seed='11'/><feColorMatrix values='0 0 0 0 0.62  0 0 0 0 0.66  0 0 0 0 0.70  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      /* high-frequency fine grain (sandpaper feel) */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='17'/><feColorMatrix values='0 0 0 0 0.30  0 0 0 0 0.36  0 0 0 0 0.42  0 0 0 0.22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      /* a few hand-placed darker mineral spots — irregular, not a grid */
+      radial-gradient(ellipse 28px 18px at 47px 23px,
+        rgba(120, 132, 142, 0.30), transparent 70%),
+      radial-gradient(ellipse 44px 26px at 211px 87px,
+        rgba(150, 162, 172, 0.22), transparent 70%),
+      radial-gradient(ellipse 22px 14px at 308px 41px,
+        rgba(108, 120, 130, 0.28), transparent 70%),
+      radial-gradient(ellipse 36px 22px at 92px 178px,
+        rgba(140, 152, 162, 0.20), transparent 70%),
+      radial-gradient(ellipse 24px 16px at 246px 244px,
+        rgba(124, 136, 146, 0.26), transparent 70%),
+      radial-gradient(ellipse 30px 20px at 332px 296px,
+        rgba(150, 162, 172, 0.20), transparent 70%),
+      radial-gradient(ellipse 18px 12px at 23px 312px,
+        rgba(132, 144, 154, 0.24), transparent 70%);
+    background-repeat: repeat, repeat, repeat,
+      no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    background-size: 360px 360px, 360px 360px, 360px 360px,
+      360px 360px, 360px 360px, 360px 360px, 360px 360px, 360px 360px, 360px 360px, 360px 360px;
   }
 
   .obj {
     position: absolute;
   }
 
-  /* Character: centered, standing on the floor line.
-     Aspect ratio matches the new SVG viewBox (453 x 1380). */
+  /* ─────────── WINDOW ───────────
+     Width is fixed (720px). Height derives from the frame aspect ratio
+     (1786/964 ≈ 0.5397). The window's bottom edge is the sill front,
+     which sits on the character's wrist.
+
+     Geometry (character bottom: 0, height: char_h):
+       character top    = 100vh - char_h
+       wrist y          = 100vh - char_h * (1 - 693.478/1380)
+                        = 100vh - char_h * 0.4975
+       sill bottom      = wrist y
+       window height    = 720 * 964/1786 = 388.7px (capped to viewport)
+       window top       = sill bottom - window height
+                        = 100vh - char_h * 0.4975 - 388.7
+
+     For the default 1080px viewport with char_h = 720:
+       window top = 1080 - 358.2 - 388.7 = 333.1
+
+     The min() cap on height keeps things sensible on viewports shorter
+     than ~820px. */
+  .obj--window {
+    left: 50%;
+    top: calc(
+      100vh
+      - min(720px, calc(100vh - 100px)) * 0.4975
+      - min(388.7px, calc((100vh - 100px) * 964 / 1786))
+    );
+    width: 720px;
+    height: min(388.7px, calc((100vh - 100px) * 964 / 1786));
+    transform: translateX(-50%);
+    z-index: 5;
+    overflow: visible;
+  }
+
+  /* The scenery sits behind the frame, clipped to the glass opening.
+     Glass opening in frame coords (viewBox 1786x964): x: 56..1731,
+     y: 45..880. As percentages: left 3.14%, width 93.79%, top 4.67%,
+     height 86.62%. */
+  .window-view-slot {
+    position: absolute;
+    left: 3.14%;
+    top: 4.67%;
+    width: 93.79%;
+    height: 86.62%;
+    overflow: hidden;
+    z-index: -1;
+  }
+
+  /* ─────────── SILL ITEMS ───────────
+     Both the clock and the books sit on the windowsill. The sill's top
+     surface is at frame y=918, the front face is at y=939..964. The sill
+     top is 95.23% of the frame height (918/964).
+
+     They are sized in absolute px and positioned as percentages of the
+     window element, so they scale with the window if we ever resize it,
+     but the window itself is fixed px, so the sill items are also stable. */
+  .sill {
+    position: absolute;
+    z-index: 6;
+  }
+
+  /* Clock on the LEFT of the sill. Hexagonal, 120x120 viewBox. ~64px tall. */
+  .sill--clock {
+    left: 10%;
+    bottom: 6%;
+    width: 64px;
+    height: 64px;
+  }
+
+  /* Books on the RIGHT of the sill. 200x80 viewBox (wider than tall). */
+  .sill--books {
+    right: 10%;
+    bottom: 2%;
+    width: 110px;
+    height: 44px;
+  }
+
+  /* ─────────── CHARACTER ───────────
+     Capped at 720px tall, but shrinks to (100vh - 100px) on shorter
+     viewports so the character never overflows vertically. bottom: 0
+     keeps the feet on the floor. Width is the height scaled by the
+     canvas ratio (453/1380). */
   .obj--character {
     left: 50%;
-    bottom: 2vh;
-    height: 82vh;
-    aspect-ratio: 453 / 1380;
+    bottom: 0;
+    width: calc(min(720px, calc(100vh - 100px)) * 453 / 1380);
+    height: min(720px, calc(100vh - 100px));
     transform: translateX(-50%);
     z-index: 20;
     cursor: pointer;
   }
 
-  /* Bookshelf: back-left, smaller for depth */
-  .obj--shelf {
-    left: 12%;
-    bottom: 24vh;
-    height: 42vh;
-    aspect-ratio: 260 / 360;
-    z-index: 10;
-  }
-
-  /* Clock: upper-right on the wall */
-  .obj--clock {
-    right: 12%;
-    top: 12vh;
-    width: clamp(90px, 12vh, 150px);
-    aspect-ratio: 1 / 1;
-    z-index: 10;
-  }
-
-  /* Grounding shadows */
+  /* Grounding shadow under the character */
   .contact-shadow {
     position: absolute;
     left: 50%;
@@ -109,25 +225,5 @@ import Overlays from '../components/Overlays.astro';
     bottom: 1vh;
     width: 46%;
     height: 5vh;
-  }
-
-  .contact-shadow--shelf {
-    bottom: -2vh;
-    width: 84%;
-    height: 4vh;
-  }
-
-  @media (max-width: 720px) {
-    .obj--character {
-      height: 66vh;
-    }
-    .obj--shelf {
-      left: 4%;
-      height: 34vh;
-      bottom: 20vh;
-    }
-    .obj--clock {
-      right: 6%;
-    }
   }
 </style>

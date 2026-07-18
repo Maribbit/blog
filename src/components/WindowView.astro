@@ -1,0 +1,77 @@
+---
+// WindowView — the scene visible through the open window.
+//
+// Separate from the frame so the scenery can be swapped independently
+// (day/night, different locations, animations, etc).
+//
+// The viewBox matches the glass opening of the frame: 1698 x 835.
+// The frame component renders this view behind itself, sized to fit the
+// opening exactly.
+//
+// All colors are flat. The scene is built from simple shapes: sky band,
+// ocean band, two distant island silhouettes, a few wave streaks, and a
+// small lighthouse.
+---
+
+<div class="window-view" aria-hidden="true">
+  <svg
+    class="window-view__svg"
+    viewBox="0 0 1698 835"
+    preserveAspectRatio="xMidYMid slice"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <!-- Sky: flat cool blue-gray, occupying the upper portion -->
+    <rect id="Sky" x="0" y="0" width="1698" height="455" fill="#c4d4dd" />
+
+    <!-- Ocean: flat deeper blue-gray, below the horizon -->
+    <rect id="Ocean" x="0" y="455" width="1698" height="380" fill="#5a7886" />
+
+    <!-- Distant island silhouette (right of center) -->
+    <path
+      id="Island_Right"
+      d="M 1105 455 Q 1155 385 1245 400 Q 1335 380 1405 415 Q 1465 405 1485 455 Z"
+      fill="#728896"
+    />
+    <!-- A second smaller island (left) -->
+    <path
+      id="Island_Left"
+      d="M 305 455 Q 335 415 395 425 Q 455 415 485 455 Z"
+      fill="#8ea3b1"
+    />
+
+    <!-- Subtle wave streaks on the ocean -->
+    <g id="Waves" opacity="0.18" fill="#ffffff">
+      <rect x="125" y="510" width="280" height="2" />
+      <rect x="525" y="550" width="180" height="2" />
+      <rect x="825" y="495" width="220" height="2" />
+      <rect x="1225" y="540" width="240" height="2" />
+      <rect x="275" y="595" width="160" height="2" />
+      <rect x="1025" y="615" width="280" height="2" />
+      <rect x="625" y="655" width="200" height="2" />
+      <rect x="1425" y="685" width="180" height="2" />
+    </g>
+
+    <!-- Lighthouse on the right island -->
+    <g id="Lighthouse" transform="translate(1325, 380)">
+      <rect x="-3" y="0" width="6" height="60" fill="#3e4a52" />
+      <rect x="-4" y="56" width="8" height="6" fill="#3e4a52" />
+      <rect x="-5" y="0" width="10" height="3" fill="#3e4a52" />
+      <circle cx="0" cy="-4" r="5" fill="#94231f" />
+      <circle cx="0" cy="-4" r="2" fill="#fff8e1" />
+    </g>
+  </svg>
+</div>
+
+<style>
+  .window-view {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .window-view__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
