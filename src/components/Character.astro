@@ -1,114 +1,227 @@
 ---
-// Original T-pose, rendered inline so we can animate its named groups.
-// No pose transform: the sleeves are fused into the coat path and can't be
-// cleanly rigged from this asset (see the separation guidance in chat).
-// Life signs instead: a subtle breathing motion + randomized blinking.
-import charSvg from '../../public/character/Character_T_Pose.svg?raw';
+// Rigged character: shoulder caps, lapels, and arm groups are now separated
+// from the torso so we can drive a layered, anatomically-grounded breath.
+//
+// 6 independent cycles share a 4.8s base period (5.4s for the skirt) but
+// with phase offsets so the figure never looks like a single rubber scale:
+//   1. Torso core (Dress + breasts) — chest expansion from the diaphragm.
+//   2. Shoulder caps (DropShoulder front/lower L/R) — micro-rotation at the
+//      shoulder anchor so the cap rides the rising ribcage.
+//   3. Lapels (Lapel front/shadow L/R) — pivot out at the shoulder; chest
+//      pushes them apart on inhale, they swing back on exhale.
+//   4. Arms (Arm + CoatAndHand + SleeveAndHand L/R) — small pendulum sway
+//      from the shoulder joint. Real rotation, not a translate.
+//   5. Head + hair — vertical lift only, no scaling. Lags the torso peak.
+//   6. Skirt hem pleats — separate, slightly slower micro-cycle.
+//   7. (Implicit) Blink + occasional double blink via JS.
+//
+// All pivots are in the SVG's own 453x1380 viewBox coordinates. The center
+// line is x=226.5. preserveAspectRatio is forced to xMidYMax meet so feet
+// stay flush with the container bottom at any aspect ratio.
+import charSvg from '../../public/character/Character_Standing.svg?raw';
+
+const charSvgPinned = charSvg.replace(
+  /<svg([^>]*)>/,
+  (match, attrs) =>
+    /preserveAspectRatio=/.test(attrs)
+      ? match
+      : `<svg${attrs} preserveAspectRatio="xMidYMax meet">`
+);
 ---
 
 <div class="character" aria-hidden="true">
-  <Fragment set:html={charSvg} />
+  <Fragment set:html={charSvgPinned} />
 </div>
 
 <style>
   .character {
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    display: block;
+    overflow: visible;
   }
 
   .character :global(svg) {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    display: block;
     overflow: visible;
     filter: drop-shadow(0 8px 14px var(--color-shadow));
   }
 
-  /* Breathing is driven part-by-part, not by floating the whole figure.
-     Two decoupled motions so the head doesn't inflate with the chest:
+  /* -------- Pivots, in the SVG's own viewBox coords (453 x 1380) -------- */
 
-     1) TORSO (chest + shoulders + arms): expands from the diaphragm (~y730).
-        The ribcage widens (scaleX) and the shoulders rise (scaleY + lift).
-        This is the real "breath" and carries the larger amplitude.
-     2) HEAD (+ hair clips): NO scaling — it only rides a small vertical lift,
-        with a lower amplitude and a slightly later peak, so it *follows* the
-        chest like a head sitting on a rising ribcage rather than breathing
-        on its own. */
+  /* Torso core: ribcage expands from the diaphragm (226.5, 730). */
   .character :global(#Dress),
-  .character :global(#SailorCollar),
-  .character :global(#Coat_R),
-  .character :global(#Coat_L),
-  .character :global(#Hand_R),
-  .character :global(#Hand_L) {
+  .character :global(#Breasts_Upper) {
     transform-box: view-box;
-    transform-origin: 553px 730px;
-    animation: breathe-torso 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    transform-origin: 226.5px 730px;
+    animation: breathe-torso-core 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
     will-change: transform;
   }
 
+  /* Skirt pleats: independent cycle (5.4s) and phase so the hem breathes
+     a beat after the upper torso. Tiny scaleY + a hint of droop. */
+  .character :global(#Dress_PleatedHem_Upper) {
+    transform-box: view-box;
+    transform-origin: 226.5px 562.978px;
+    animation: breathe-skirt 5.4s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  /* Shoulder caps: pivot at the shoulder seam, ride the rising ribcage. */
+  .character :global(#DropShoulder_Front_R),
+  .character :global(#DropShoulder_Lower_R) {
+    transform-box: view-box;
+    transform-origin: 168.5px 343.978px;
+    animation: breathe-shoulder-r 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+  .character :global(#DropShoulder_Front_L),
+  .character :global(#DropShoulder_Lower_L) {
+    transform-box: view-box;
+    transform-origin: 284.5px 343.978px;
+    animation: breathe-shoulder-l 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  /* Lapels: pivot at the shoulder seam, swing outward on inhale. */
+  .character :global(#Lapel_Front_R),
+  .character :global(#Lapel_Shadow_R) {
+    transform-box: view-box;
+    transform-origin: 168.5px 343.978px;
+    animation: breathe-lapel-r 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+  .character :global(#Lapel_Front_L),
+  .character :global(#Lapel_Shadow_L) {
+    transform-box: view-box;
+    transform-origin: 284.5px 343.978px;
+    animation: breathe-lapel-l 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  /* Arms: real rotation around the shoulder joint. */
+  .character :global(#Arm_R),
+  .character :global(#CoatAndHand_R),
+  .character :global(#SleeveAndHand_R) {
+    transform-box: view-box;
+    transform-origin: 116px 304.014px;
+    animation: breathe-arm-r 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+  .character :global(#Arm_L),
+  .character :global(#CoatAndHand_L),
+  .character :global(#SleeveAndHand_L) {
+    transform-box: view-box;
+    transform-origin: 328.999px 301.477px;
+    animation: breathe-arm-l 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
+    will-change: transform;
+  }
+
+  /* Head + hair: NO scaling. Tiny vertical lift, peak lags the torso. */
   .character :global(#Head),
   .character :global(#Hair_Accessory) {
     transform-box: view-box;
-    transform-origin: 553px 320px; /* base of the neck */
+    transform-origin: 226.5px 290px;
     animation: breathe-head 4.8s cubic-bezier(0.42, 0, 0.4, 1) infinite;
     will-change: transform;
   }
 
-  /* Asymmetric timing: a quicker inhale, a brief hold, then a slower exhale. */
-  @keyframes breathe-torso {
-    0% {
-      transform: scaleX(1) scaleY(1) translateY(0);
-    }
-    34% {
-      transform: scaleX(1.008) scaleY(1.0075) translateY(-1.3px);
-    }
-    46% {
-      transform: scaleX(1.0068) scaleY(1.0064) translateY(-1px);
-    }
-    100% {
-      transform: scaleX(1) scaleY(1) translateY(0);
-    }
-  }
-
-  /* Head: smaller lift, peak lags the torso (40% vs 34%) for a natural follow. */
-  @keyframes breathe-head {
-    0% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-2.4px);
-    }
-    52% {
-      transform: translateY(-2px);
-    }
-    100% {
-      transform: translateY(0);
-    }
-  }
-
-  /* Blink pivots: eye centers in the SVG's own coordinate space. */
+  /* Blink pivots (used by the JS-side scaleY animation). */
   .character :global(#Eye_R) {
     transform-box: view-box;
-    transform-origin: 511px 154px;
+    transform-origin: 184px 154px;
   }
-
   .character :global(#Eye_L) {
     transform-box: view-box;
-    transform-origin: 595px 154px;
+    transform-origin: 268px 154px;
+  }
+
+  /* -------- Keyframes -------- */
+
+  /* Asymmetric breath: 0–34% inhale, 34–46% hold, 46–100% exhale. */
+  @keyframes breathe-torso-core {
+    0%   { transform: scaleX(1)      scaleY(1)      translateY(0); }
+    34%  { transform: scaleX(1.012)  scaleY(1.010)  translateY(-1.6px); }
+    46%  { transform: scaleX(1.010)  scaleY(1.008)  translateY(-1.2px); }
+    100% { transform: scaleX(1)      scaleY(1)      translateY(0); }
+  }
+
+  @keyframes breathe-skirt {
+    0%   { transform: scaleX(1)     scaleY(1)     translateY(0); }
+    40%  { transform: scaleX(1.004) scaleY(1.006) translateY(0.6px); }
+    100% { transform: scaleX(1)     scaleY(1)     translateY(0); }
+  }
+
+  /* Right cap tilts up (counter-clockwise) on inhale. */
+  @keyframes breathe-shoulder-r {
+    0%   { transform: rotate(0deg)    translateY(0); }
+    34%  { transform: rotate(-0.9deg) translateY(-1.4px); }
+    46%  { transform: rotate(-0.7deg) translateY(-1.1px); }
+    100% { transform: rotate(0deg)    translateY(0); }
+  }
+  @keyframes breathe-shoulder-l {
+    0%   { transform: rotate(0deg)   translateY(0); }
+    34%  { transform: rotate(0.9deg) translateY(-1.4px); }
+    46%  { transform: rotate(0.7deg) translateY(-1.1px); }
+    100% { transform: rotate(0deg)   translateY(0); }
+  }
+
+  @keyframes breathe-lapel-r {
+    0%   { transform: rotate(0deg)    translateY(0); }
+    34%  { transform: rotate(-0.6deg) translateY(-1.2px); }
+    46%  { transform: rotate(-0.45deg) translateY(-0.9px); }
+    100% { transform: rotate(0deg)    translateY(0); }
+  }
+  @keyframes breathe-lapel-l {
+    0%   { transform: rotate(0deg)   translateY(0); }
+    34%  { transform: rotate(0.6deg) translateY(-1.2px); }
+    46%  { transform: rotate(0.45deg) translateY(-0.9px); }
+    100% { transform: rotate(0deg)   translateY(0); }
+  }
+
+  @keyframes breathe-arm-r {
+    0%   { transform: rotate(0deg)    translateY(0); }
+    34%  { transform: rotate(-0.55deg) translateY(-1.2px); }
+    46%  { transform: rotate(-0.4deg)  translateY(-0.9px); }
+    100% { transform: rotate(0deg)    translateY(0); }
+  }
+  @keyframes breathe-arm-l {
+    0%   { transform: rotate(0deg)   translateY(0); }
+    34%  { transform: rotate(0.55deg) translateY(-1.2px); }
+    46%  { transform: rotate(0.4deg)  translateY(-0.9px); }
+    100% { transform: rotate(0deg)   translateY(0); }
+  }
+
+  /* Head peak at 40% (torso peaks at 34%) so it rides the chest, not drives. */
+  @keyframes breathe-head {
+    0%   { transform: translateY(0); }
+    40%  { transform: translateY(-2.6px); }
+    52%  { transform: translateY(-2.1px); }
+    100% { transform: translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .character :global(#Head),
-    .character :global(#Hair_Accessory),
-    .character :global(#SailorCollar),
     .character :global(#Dress),
-    .character :global(#Coat_R),
-    .character :global(#Coat_L),
-    .character :global(#Hand_R),
-    .character :global(#Hand_L) {
+    .character :global(#Breasts_Upper),
+    .character :global(#Dress_PleatedHem_Upper),
+    .character :global(#DropShoulder_Front_R),
+    .character :global(#DropShoulder_Lower_R),
+    .character :global(#DropShoulder_Front_L),
+    .character :global(#DropShoulder_Lower_L),
+    .character :global(#Lapel_Front_R),
+    .character :global(#Lapel_Shadow_R),
+    .character :global(#Lapel_Front_L),
+    .character :global(#Lapel_Shadow_L),
+    .character :global(#Arm_R),
+    .character :global(#CoatAndHand_R),
+    .character :global(#SleeveAndHand_R),
+    .character :global(#Arm_L),
+    .character :global(#CoatAndHand_L),
+    .character :global(#SleeveAndHand_L),
+    .character :global(#Head),
+    .character :global(#Hair_Accessory) {
       animation: none;
     }
   }

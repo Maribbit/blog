@@ -62,12 +62,13 @@ import Overlays from '../components/Overlays.astro';
     position: absolute;
   }
 
-  /* Character: centered, standing on the floor line */
+  /* Character: centered, standing on the floor line.
+     Aspect ratio matches the new SVG viewBox (453 x 1380). */
   .obj--character {
     left: 50%;
     bottom: 2vh;
     height: 82vh;
-    aspect-ratio: 1108 / 1380;
+    aspect-ratio: 453 / 1380;
     transform: translateX(-50%);
     z-index: 20;
     cursor: pointer;
