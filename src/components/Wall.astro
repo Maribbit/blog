@@ -1,0 +1,154 @@
+---
+// Wall — stage-locked weathered plaster.
+//
+// Fixed 1920×1080 viewBox so the texture lives in design coordinates
+// and pans with the stage instead of drifting against the viewport.
+// All noise lives inside <filter> definitions scoped to this viewBox,
+// so the texture stays anchored to the wall as the camera moves.
+---
+
+<div class="wall" aria-hidden="true">
+  <svg
+    class="wall__svg"
+    viewBox="0 0 1920 1080"
+    preserveAspectRatio="xMidYMid slice"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <defs>
+      <!-- 滤镜 1：墙面粉刷起伏（低频湍流 + 漫反射光） -->
+      <filter
+        id="bump-filter"
+        x="0%"
+        y="0%"
+        width="100%"
+        height="100%"
+        filterUnits="objectBoundingBox"
+      >
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.003 0.008"
+          numOctaves="4"
+          seed="24"
+          result="bumpNoise"
+        />
+        <feDiffuseLighting
+          in="bumpNoise"
+          surfaceScale="2.5"
+          diffuseConstant="1.2"
+          lighting-color="#ffffff"
+        >
+          <feDistantLight azimuth="135" elevation="35" />
+        </feDiffuseLighting>
+      </filter>
+
+      <!-- 滤镜 2：扭曲噪波 + 位移映射 + 锐化，生成无规则点阵的自然裂纹网 -->
+      <filter
+        id="crack-filter"
+        x="0%"
+        y="0%"
+        width="100%"
+        height="100%"
+        filterUnits="objectBoundingBox"
+      >
+        <!-- 打散网格的随机扭曲噪波 -->
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.05"
+          numOctaves="2"
+          seed="13"
+          result="warp_noise"
+        />
+        <!-- 原始裂纹噪波 -->
+        <feTurbulence
+          type="turbulence"
+          baseFrequency="0.018 0.012"
+          numOctaves="4"
+          seed="88"
+          result="base_veins"
+        />
+        <!-- 位移映射打乱坐标，消灭规则点阵 -->
+        <feDisplacementMap
+          in="base_veins"
+          in2="warp_noise"
+          scale="25"
+          xChannelSelector="R"
+          yChannelSelector="G"
+          result="warped_veins"
+        />
+        <!-- 提取裂纹，slope 降低使裂纹更柔和连贯 -->
+        <feComponentTransfer in="warped_veins" result="sharpVeins">
+          <feFuncR type="linear" slope="10" intercept="-0.15" />
+          <feFuncG type="linear" slope="10" intercept="-0.15" />
+          <feFuncB type="linear" slope="10" intercept="-0.15" />
+        </feComponentTransfer>
+        <!-- 赋予冷灰色调 -->
+        <feColorMatrix
+          in="sharpVeins"
+          type="matrix"
+          values="0 0 0 0 0.45
+                 0 0 0 0 0.48
+                 0 0 0 0 0.50
+                 -0.33 -0.33 -0.33 0 1"
+        />
+      </filter>
+
+      <!-- 空间光影：中央透亮、四周柔和暗角 -->
+      <radialGradient id="lighting" cx="50%" cy="50%" r="70%">
+        <stop offset="20%" stop-color="rgba(0,0,0,0)" />
+        <stop offset="100%" stop-color="rgba(0,0,0,0.05)" />
+      </radialGradient>
+    </defs>
+
+    <!-- 底色：与 wall.html 一致的冷灰 -->
+    <rect width="1920" height="1080" fill="#E0E2E4" />
+
+    <!-- 1. 粉刷起伏（multiply 融合） -->
+    <g style="mix-blend-mode: multiply;" opacity="0.6">
+      <rect
+        x="0"
+        y="0"
+        width="1920"
+        height="1080"
+        fill="#ffffff"
+        filter="url(#bump-filter)"
+      />
+    </g>
+
+    <!-- 2. 有机裂纹（multiply 融合） -->
+    <g style="mix-blend-mode: multiply;" opacity="0.55">
+      <rect
+        x="0"
+        y="0"
+        width="1920"
+        height="1080"
+        fill="#000000"
+        filter="url(#crack-filter)"
+      />
+    </g>
+
+    <!-- 3. 空间光影 -->
+    <rect
+      x="0"
+      y="0"
+      width="1920"
+      height="1080"
+      fill="url(#lighting)"
+      pointer-events="none"
+    />
+  </svg>
+</div>
+
+<style>
+  .wall {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: var(--color-bg, #edf1f2);
+  }
+
+  .wall__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
