@@ -30,6 +30,28 @@
     overflow="visible"
     xmlns="http://www.w3.org/2000/svg"
   >
+    <defs>
+      <!--
+        Sill cast shadow — soft, wide blur so the windowsill reads as
+        physically projecting onto the wall. Painted as an SVG element
+        (not a CSS box-shadow on a div) so it lives in the same plane
+        as the wall texture, not on a separate HTML box. stdDeviation
+        is generous so the +75px overhang on each side still has a
+        soft penumbra, and the ellipse is wider than the sill so the
+        shadow does not stop abruptly at the frame edge.
+      -->
+      <filter
+        id="sill-cast-shadow"
+        x="-10%"
+        y="-100%"
+        width="120%"
+        height="300%"
+        filterUnits="objectBoundingBox"
+      >
+        <feGaussianBlur stdDeviation="10" />
+      </filter>
+    </defs>
+
     <!-- ════════ FRAME INNER BEVELS ════════
          Drawn before the front faces so the front faces visually "cap" them.
          These are the bright inner edges that catch light from inside. -->
@@ -122,6 +144,32 @@
       width="1936"
       height="25"
       fill="#ACA8A5"
+    />
+
+    <!--
+      Cast shadow of the windowsill onto the wall.
+      Drawn after the sill so it overlaps the bottom edge of the sill
+      front face (where light is occluded most), then is blurred and
+      faded. Tinted with the same cool gray used by the character
+      contact shadow (--color-shadow) so the whole room reads with
+      one light source.
+    -->
+    <!--
+      Width matches the sill front face exactly: x = -75 .. 1861
+      (1936 wide in viewBox coords), so rx = 968 with cx at 893 puts
+      the shadow's strongest band right under the visible sill. The
+      75px overhang on each side does not extend the shadow further
+      because in 2.5D those side wings are the top surface of the
+      sill, not the face that occludes light from above.
+    -->
+    <ellipse
+      id="Sill_Cast_Shadow"
+      cx="893"
+      cy="970"
+      rx="968"
+      ry="14"
+      fill="rgba(34, 46, 54, 0.34)"
+      filter="url(#sill-cast-shadow)"
     />
   </svg>
 </div>
