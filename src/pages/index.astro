@@ -7,6 +7,7 @@ import Overlays from '../components/Overlays.astro';
 import OpenWindow from '../components/OpenWindow.astro';
 import WindowView from '../components/WindowView.astro';
 import Wall from '../components/Wall.astro';
+import Desk from '../components/Desk.astro';
 ---
 
 <Layout title="Maribbit's Blog 2.5D | 海兔的 2.5D 博客">
@@ -38,6 +39,8 @@ import Wall from '../components/Wall.astro';
         <div class="contact-shadow contact-shadow--character"></div>
         <Character />
       </div>
+
+      <Desk />
     </div>
 
     <Overlays />
@@ -69,9 +72,14 @@ import Wall from '../components/Wall.astro';
 
     - char-h scales with viewport HEIGHT so the window always fits with
       a small top margin, capped at 560px on tall screens.
-    - Stage width: max(100%, win-w × 1.08). On narrow viewports the
-      stage is wider than the room, and .room scrolls horizontally —
-      the wall extends past the visible area.
+    - Stage width: max(100%, win-w × 1.5). The desk is 1.4 × win-w and
+      is the widest object on stage, so the stage must be at least that
+      wide. The extra 0.1× keeps the wall peeking past the desk edges.
+      On narrow viewports the stage is wider than the room and .room
+      scrolls horizontally — the wall extends past the visible area.
+    - Stage is centered with margin: 0 auto so the character is centered
+      on wide viewports too (where there's no scroll overflow to push
+      it back into the middle).
     - Window bottom (sill front) lands on the character's wrist.
     - Frame aspect 1786/964 is never broken.
 
@@ -82,6 +90,7 @@ import Wall from '../components/Wall.astro';
       window-to-char ratio 1.55 × 964/1786 ≈ 0.8366
       vertical span        win-h/char-h + wrist-from-bottom
                            = 0.8366 + 0.4975 = 1.3341
+      desk width           1.4 × win-w
   */
   .room {
     --win-top-margin: 24px;
@@ -96,7 +105,13 @@ import Wall from '../components/Wall.astro';
     --win-w: var(--win-scale);
     --win-h: calc(var(--win-scale) * 964 / 1786);
 
-    --stage-w: max(100%, calc(var(--win-w) * 1.08));
+    /* Desk is wider than the window (1.4×win-w), so the stage must
+       be at least that wide — otherwise the desk overflows the stage
+       and the wall no longer extends past the desk on narrow viewports.
+       Add a small safety margin (1.5×) so the wall peeks past the desk
+       edges instead of the desk being flush with the stage boundary. */
+    --desk-w: calc(var(--win-w) * 1.4);
+    --stage-w: max(100%, calc(var(--win-w) * 1.5));
 
     --clock-size: calc(var(--win-w) * 0.072);
     --books-w: calc(var(--win-w) * 0.115);
@@ -119,6 +134,10 @@ import Wall from '../components/Wall.astro';
     width: var(--stage-w);
     height: 100%;
     min-height: 100%;
+    /* Center the stage horizontally when the room is wider than the
+       stage (e.g. very wide viewports). The .room scroll handles the
+       narrow-viewport case via centerStage(). */
+    margin: 0 auto;
   }
 
   .obj {

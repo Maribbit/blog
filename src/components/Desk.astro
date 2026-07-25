@@ -1,0 +1,92 @@
+---
+// Desk — the surface in front of the character.
+//
+// Stage-locked block in front of the character, so the character's
+// lower body is occluded by the desk top. Two faces only:
+//   - top:    a thin parallelogram, foreshortened depth
+//   - front:  a rectangle hanging from the top's front edge to the
+//             stage floor
+//
+// The CSS layout places the SVG box in stage coordinates; the SVG
+// itself uses a 100×100 viewBox so all geometry inside is a clean
+// fraction of the desk box.
+//
+//   viewBox 100 × 100
+//   - top face:    y 0 → 11, parallelogram 0..100 / 4..96
+//   - front face:  y 11 → 100, rectangle 0..100
+//
+// Stage geometry:
+//   - center x:        50% of stage
+//   - width:           1.4 × win-w
+//   - height:          0.42 × char_h  (top depth + front face)
+//   - bottom y:        stage floor (0)
+//
+// z-index 25 (above character 20) so the desk occludes the lower body.
+---
+
+<div class="desk" aria-hidden="true">
+  <svg
+    class="desk__svg"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <!-- Front face: rectangle from top edge to bottom of viewBox -->
+    <rect
+      class="desk__face desk__face--front"
+      x="0"
+      y="11"
+      width="100"
+      height="89"
+    />
+    <!-- Top face: parallelogram, back edge inset by 4 on each side -->
+    <polygon
+      class="desk__face desk__face--top"
+      points="0,11 100,11 96,0 4,0"
+    />
+  </svg>
+</div>
+
+<style>
+  /*
+    The desk box in stage coordinates:
+      - width:  --desk-w (= 1.4 × win-w, defined on .room)
+      - height: 0.42 × char_h  (full slab: top depth + front face)
+    The top sits 0.04 × char_h above the skirt hem so the front face's
+    top edge lands at the hem level.
+  */
+  .desk {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: var(--desk-w);
+    height: calc(var(--char-h) * 0.42);
+    transform: translateX(-50%);
+    z-index: 25;
+    overflow: visible;
+  }
+
+  .desk__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+  }
+
+  /* Top face: lifted off the wall. The wall is #E8EBEC; the desk
+     top sits a clear step brighter so the surface reads at a glance.
+     Not as bright as the window sill's #EFEFEF upper face — that
+     would feel like a different material. Cool, like aged card-stock. */
+  .desk__face--top {
+    fill: #d2d9da;
+  }
+
+  /* Front face: shaded under the top, but lighter than the window
+     sill's #ACA8A5 front. That warm dark tone would weigh the desk
+     down too much; this stays cool and only modestly darker than
+     the top, keeping the surface feeling like the same piece of
+     furniture rather than a different material. */
+  .desk__face--front {
+    fill: #a8b5b6;
+  }
+</style>
