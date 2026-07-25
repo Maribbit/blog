@@ -72,11 +72,10 @@ function makeCloudPoints(width: number, maxHeight: number): CloudPt[] {
     const jitter = (Math.random() - 0.5) * usableW / n * 0.6;
     const rx = Math.max(margin, Math.min(width - margin, baseX + jitter));
 
-    /* Bell-curve height: small at edges (so side diagonals aren't
-       flat against the kite), peaks at center. The minimum hFactor
-       ensures the kite's upper diagonal stays below the top face. */
+    /* Bell-curve height: edges at 50% of center height so clouds
+       don't look like flat-brimmed straw hats. */
     const centered = Math.abs(progress - 0.5) * 2;
-    const hFactor = Math.min(1 - centered + 0.2, 1);
+    const hFactor = 1 - centered * 0.5;
     const noise = 0.55 + Math.random() * 0.5;
     pts.push({ rx, ry: -(maxHeight * hFactor * noise) });
   }
@@ -89,12 +88,28 @@ function makeTopPath(
   x: number, baseY: number, width: number, pts: CloudPt[]
 ): string {
   if (pts.length === 0) return 'M 0 0 Z';
-  let d = `M ${x + pts[0].rx},${baseY + pts[0].ry}`;
-  for (let i = 1; i < pts.length; i++) {
-    d += ` L ${x + pts[i].rx},${baseY + pts[i].ry}`;
+  /* Convert to absolute coordinates for simpler math */
+  const abs = pts.map(p => ({ x: x + p.rx, y: baseY + p.ry }));
+  if (abs.length === 1) {
+    const p = abs[0];
+    return `M ${p.x},${p.y} L ${x + width},${baseY} L ${x},${baseY} Z`;
   }
-  /* Straight down to right baseline end, across, and back up to
-     first bump — pure lines, no Q curves. */
+
+  let d = `M ${abs[0].x},${abs[0].y}`;
+  /* Catmull-Rom → cubic Bezier for each segment.  The curve passes
+     through every point smoothly without the S-shaped overshoot that
+     midpoint-stacked control points produce. */
+  for (let i = 0; i < abs.length - 1; i++) {
+    const p0 = i > 0 ? abs[i - 1] : abs[0];
+    const p1 = abs[i];
+    const p2 = abs[i + 1];
+    const p3 = i + 2 < abs.length ? abs[i + 2] : abs[i + 1];
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`;
+  }
   d += ` L ${x + width},${baseY}`;
   d += ` L ${x},${baseY}`;
   d += ' Z';
