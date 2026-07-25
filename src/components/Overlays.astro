@@ -1,79 +1,104 @@
 ---
-// Two navigable surfaces, driven by the URL hash so the browser's history
-// works natively:
-//   #about   -> a small frosted-glass card (clicking the character)
-//   #reading -> a full-screen long-form reading space (clicking the books)
-// Any [data-nav="x"] element opens #x; [data-close] / Esc / browser Back close.
-// Because state lives in location.hash, Back/Forward and deep links just work,
-// and refreshing keeps you where you were (safe on static hosting).
+// Two navigable surfaces on the shared Maribbit Paper system:
+//   #about   -> paper card  (clicking the character)
+//   #reading -> paper page  (clicking the books)
 //
-// Long-form copy is authored as Markdown and rendered via Astro's built-in
-// Markdown support: import the .md file, read its frontmatter, drop in <Content/>.
+// Layout philosophy: content-centric, not chrome-centric.
+// Dismiss / back hang off the content box itself (left/right docks),
+// so mouse travel stays in the content neighborhood — never forced
+// to viewport corners. No full-bleed top bars.
+//
+// Any [data-nav="x"] opens #x; [data-close] / Esc / browser Back close.
 import { Content, frontmatter } from '../articles/finding-breath.md';
 ---
 
-<!-- ABOUT: repurposed frosted card. Short, personal, self-contained. -->
-<div class="about" id="about-view" data-open="false" aria-hidden="true">
-  <div class="about__catch" data-close></div>
+<!-- ABOUT: note in the room; close hangs off the card's right edge. -->
+<div class="paper paper--card" id="about-view" data-open="false" aria-hidden="true">
+  <div class="paper__scrim" data-close></div>
 
-  <div class="about__frame">
+  <div class="paper__stage paper__stage--card">
     <section
-      class="about__panel"
+      class="paper__sheet"
       role="dialog"
       aria-modal="true"
       aria-labelledby="about-title"
     >
-      <span class="about__accent"></span>
-      <header class="about__bar">
-        <h2 class="about__title" id="about-title">关于 · About</h2>
-        <button class="about__close" type="button" data-close aria-label="关闭">
-          <span></span><span></span>
-        </button>
+      <header class="paper__intro">
+        <span class="paper__label">About</span>
+        <h2 class="paper__title" id="about-title">关于</h2>
       </header>
-      <div class="about__body">
+
+      <div class="paper__body">
         <p>你好，我是海兔。这是一个关于图形、克制与实验的 2.5D 博客。</p>
         <p>
           比起把内容塞进一张卡片，我更想把它做成一个可以走进去的房间。点亮的时钟、
           身后的书架，都是可以点开的入口。
         </p>
-        <p class="about__meta">书架里放着可长读的文字 · 时钟走着真实的时间</p>
+        <p class="paper__quiet">书架里放着可长读的文字 · 时钟走着真实的时间</p>
       </div>
+
+      <!-- Docked to the sheet, not the viewport -->
+      <button
+        class="paper__dock paper__dock--close"
+        type="button"
+        data-close
+        aria-label="关闭"
+      >
+        <span class="paper__x" aria-hidden="true"></span>
+      </button>
     </section>
   </div>
 </div>
 
-<!-- READING: a full, stable reading space. No dismiss-X, only a Back affordance
-     and browser navigation, so it never reads as a temporary popup. -->
-<div class="reader" id="reading-view" data-open="false" aria-hidden="true">
-  <div class="reader__surface">
-    <header class="reader__bar">
-      <button class="reader__back" type="button" data-close aria-label="返回">
-        <span class="reader__arrow"></span>返回
-      </button>
-      <span class="reader__brand">海兔的博客 · 阅读</span>
-    </header>
+<!-- READING: floating column; back hangs left, label hangs right. -->
+<div class="paper paper--page" id="reading-view" data-open="false" aria-hidden="true">
+  <div class="paper__veil" aria-hidden="true"></div>
 
-    <div class="reader__scroll" id="reading-scroll" tabindex="-1">
-      <div class="reader__col">
-        <nav class="reader__index" aria-label="文章索引">
-          <span class="reader__index-label">近期</span>
+  <div class="paper__scroll" id="reading-scroll" tabindex="-1">
+    <div class="paper__stage paper__stage--page">
+      <div class="paper__col">
+        <button
+          class="paper__dock paper__dock--back"
+          type="button"
+          data-close
+          aria-label="返回"
+        >
+          <span class="paper__arrow" aria-hidden="true"></span>
+          <span class="paper__dock-label">返回</span>
+        </button>
+
+        <span class="paper__dock paper__dock--mark" aria-hidden="true">Reading</span>
+
+        <nav class="paper__index" aria-label="文章索引">
+          <span class="paper__label">近期</span>
           <ol>
-            <li><a href="#reading">在低面数里寻找呼吸感</a><time>2026 · 07</time></li>
-            <li><a href="#reading">当 AI 成为我的绘图搭档</a><time>2026 · 06</time></li>
-            <li><a href="#reading">克制，是一种设计的勇气</a><time>2026 · 05</time></li>
+            <li>
+              <a href="#reading">在低面数里寻找呼吸感</a>
+              <time>2026 · 07</time>
+            </li>
+            <li>
+              <a href="#reading">当 AI 成为我的绘图搭档</a>
+              <time>2026 · 06</time>
+            </li>
+            <li>
+              <a href="#reading">克制，是一种设计的勇气</a>
+              <time>2026 · 05</time>
+            </li>
           </ol>
         </nav>
 
-        <article class="prose">
-          <p class="prose__kicker">{frontmatter.kicker}</p>
+        <article class="paper-prose">
+          <p class="paper-prose__kicker">{frontmatter.kicker}</p>
           <h1>{frontmatter.title}</h1>
-          <p class="prose__meta">{frontmatter.date} · {frontmatter.readingTime}</p>
+          <p class="paper-prose__meta">
+            {frontmatter.date} · {frontmatter.readingTime}
+          </p>
 
-          <div class="prose__body">
+          <div class="paper-prose__body">
             <Content />
           </div>
 
-          <p class="prose__end">· 完 ·</p>
+          <div class="paper-prose__end" aria-hidden="true"></div>
         </article>
       </div>
     </div>
@@ -81,330 +106,428 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
 </div>
 
 <style>
-  /* ---------- About (frosted card) ---------- */
-  .about {
+  /* ═══════════════════════════════════════════════════════════════
+     Maribbit Paper — content-centric surfaces
+     Controls are absolute docks on the content box edges.
+     ═══════════════════════════════════════════════════════════════ */
+
+  .paper {
     position: fixed;
     inset: 0;
     z-index: 100;
     display: none;
-    align-items: center;
-    justify-content: center;
   }
-  .about[data-open='true'] {
+  .paper[data-open='true'] {
     display: flex;
-  }
-  .about__catch {
-    position: absolute;
-    inset: 0;
-    background: transparent;
-  }
-  .about__frame {
-    position: relative;
-    filter: drop-shadow(0 22px 44px rgba(34, 46, 54, 0.28));
-    animation: about-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  @keyframes about-in {
-    from {
-      opacity: 0;
-      transform: translateY(14px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  .about__panel {
-    position: relative;
-    width: min(440px, 88vw);
-    display: flex;
-    flex-direction: column;
-    /* Denser frost, higher opacity => far more readable than before. */
-    background: rgba(240, 244, 245, 0.82);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    backdrop-filter: blur(28px) saturate(180%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-    clip-path: polygon(
-      0 20px,
-      20px 0,
-      100% 0,
-      100% calc(100% - 20px),
-      calc(100% - 20px) 100%,
-      0 100%
-    );
-  }
-  .about__accent {
-    position: absolute;
-    left: 0;
-    top: 20px;
-    bottom: 0;
-    width: 4px;
-    background: var(--color-accent);
-  }
-  .about__bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.15rem 0.85rem 1.35rem;
-    border-bottom: 1px solid rgba(45, 51, 56, 0.16);
-  }
-  .about__title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--color-text);
-  }
-  .about__close {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 0;
-    flex: none;
-  }
-  .about__close span {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 1.6px;
-    background: var(--color-text-dim);
-    transition: background 0.15s ease;
-  }
-  .about__close span:first-child {
-    transform: rotate(45deg);
-  }
-  .about__close span:last-child {
-    transform: rotate(-45deg);
-  }
-  .about__close:hover span {
-    background: var(--color-accent);
-  }
-  .about__body {
-    padding: 1.1rem 1.25rem 1.35rem 1.35rem;
-    color: var(--color-text);
-    font-size: 0.92rem;
-    line-height: 1.7;
-  }
-  .about__body p {
-    margin: 0 0 0.85rem;
-  }
-  .about__body p:last-child {
-    margin-bottom: 0;
-  }
-  .about__meta {
-    color: var(--color-text-dim);
-    font-size: 0.82rem;
-    letter-spacing: 0.02em;
   }
 
-  /* ---------- Reading (full-screen long-form) ---------- */
-  .reader {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: none;
-  }
-  .reader[data-open='true'] {
+  /* ---------- Shared type ---------- */
+  .paper__label {
     display: block;
+    font-size: var(--paper-label);
+    letter-spacing: var(--paper-label-track);
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    line-height: 1.2;
   }
-  .reader__surface {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    /* Near-opaque, lightly frosted: connected to the scene, but built to read. */
-    background: rgba(240, 244, 245, 0.94);
-    -webkit-backdrop-filter: blur(34px) saturate(160%);
-    backdrop-filter: blur(34px) saturate(160%);
-    animation: reader-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  @keyframes reader-in {
-    from {
-      opacity: 0;
-      transform: translateY(2%);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  .reader__bar {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem clamp(1rem, 5vw, 3rem);
-    border-bottom: 1px solid rgba(45, 51, 56, 0.12);
-    background: linear-gradient(
-      to bottom,
-      rgba(240, 244, 245, 0.6),
-      rgba(240, 244, 245, 0)
-    );
-  }
-  .reader__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 0.35rem 0.1rem;
-    font: inherit;
-    font-size: 0.9rem;
+  .paper__title {
+    font-size: var(--paper-title-card);
+    font-weight: 600;
     letter-spacing: 0.02em;
+    line-height: 1.25;
     color: var(--color-text);
   }
-  .reader__back:hover {
-    color: var(--color-accent);
-  }
-  /* Back arrow drawn from two sharp bars (no rounded chevrons). */
-  .reader__arrow {
-    position: relative;
-    width: 12px;
-    height: 12px;
-    flex: none;
-  }
-  .reader__arrow::before,
-  .reader__arrow::after {
-    content: '';
+
+  /* ---------- Dock controls (hang off content) ---------- */
+  .paper__dock {
     position: absolute;
+    z-index: 3;
+    border: none;
+    background: rgba(237, 241, 242, 0.4);
+    -webkit-backdrop-filter: blur(10px) saturate(108%);
+    backdrop-filter: blur(10px) saturate(108%);
+    border: 1px solid var(--paper-edge);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    color: var(--color-text-dim);
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .paper__dock:hover {
+    color: var(--color-accent);
+    background: rgba(237, 241, 242, 0.62);
+  }
+  .paper__dock--close {
+    top: 0.7rem;
+    /* Sit just outside the right edge of the sheet */
+    right: 0;
+    transform: translateX(calc(100% + 0.55rem));
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    padding: 0;
+  }
+  .paper__dock--back {
+    top: 0.15rem;
     left: 0;
-    top: 50%;
-    width: 9px;
-    height: 1.6px;
-    background: currentColor;
-    transform-origin: left center;
-  }
-  .reader__arrow::before {
-    transform: rotate(-135deg);
-  }
-  .reader__arrow::after {
-    transform: rotate(135deg);
-  }
-  .reader__brand {
+    transform: translateX(calc(-100% - 0.7rem));
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.48rem 0.7rem 0.48rem 0.6rem;
+    border-radius: 999px;
     font-size: 0.8rem;
     letter-spacing: 0.06em;
-    color: var(--color-text-dim);
+    color: var(--color-text);
+    white-space: nowrap;
   }
-  .reader__scroll {
-    flex: 1;
+  .paper__dock--mark {
+    top: 0.55rem;
+    right: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    cursor: default;
+    pointer-events: none;
+    padding: 0;
+    font-size: var(--paper-label);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    transform: translateX(calc(100% + 0.85rem)) rotate(180deg);
+    color: var(--color-text-dim);
+    opacity: 0.8;
+    user-select: none;
+  }
+  .paper__x {
+    position: absolute;
+    inset: 0;
+  }
+  .paper__x::before,
+  .paper__x::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 1.5px;
+    background: currentColor;
+  }
+  .paper__x::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  .paper__x::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+  .paper__arrow {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    flex: none;
+  }
+  .paper__arrow::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-left: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  /* ──────────── Card ──────────── */
+  .paper--card {
+    align-items: center;
+    justify-content: center;
+    /* Extra side room so the hanging close button is never clipped */
+    padding: 1.25rem 3.25rem;
+  }
+  .paper__scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--paper-scrim);
+    animation: paper-scrim-in 0.2s var(--paper-ease);
+  }
+  .paper__stage--card {
+    position: relative;
+    width: min(400px, 100%);
+    animation: paper-card-in 0.22s var(--paper-ease);
+  }
+  .paper--card .paper__sheet {
+    position: relative;
+    width: 100%;
+    background: var(--paper-bg);
+    -webkit-backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
+    backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
+    border: 1px solid var(--paper-edge);
+    box-shadow: var(--paper-shadow);
+    color: var(--color-text);
+    /* Allow docks to paint outside the sheet */
+    overflow: visible;
+  }
+  .paper__intro {
+    padding: var(--paper-pad-y-card) var(--paper-pad-x-card) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+  }
+  .paper__intro .paper__title::after {
+    content: '';
+    display: block;
+    width: 1.5rem;
+    height: 2px;
+    margin-top: 0.6rem;
+    background: var(--color-accent);
+  }
+  .paper__body {
+    padding: 1rem var(--paper-pad-x-card) calc(var(--paper-pad-y-card) + 0.1rem);
+    font-size: var(--paper-body);
+    line-height: var(--paper-body-lh);
+    color: var(--paper-ink);
+  }
+  .paper__body p {
+    margin: 0 0 0.9em;
+  }
+  .paper__body p:last-child {
+    margin-bottom: 0;
+  }
+  .paper__quiet {
+    margin-top: 1.1em !important;
+    padding-top: 1em;
+    border-top: 1px solid var(--paper-hairline);
+    color: var(--color-text-dim);
+    font-size: var(--paper-quiet);
+    letter-spacing: 0.02em;
+    line-height: 1.55;
+  }
+
+  /* ──────────── Page ──────────── */
+  .paper--page {
+    display: none;
+  }
+  .paper--page[data-open='true'] {
+    display: block;
+  }
+  /* Soft veil: denser on the reading axis, open at the edges so the sea shows */
+  .paper__veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        ellipse 62% 74% at 50% 42%,
+        var(--paper-bg-dense) 0%,
+        rgba(237, 241, 242, 0.34) 55%,
+        rgba(237, 241, 242, 0.1) 100%
+      );
+    -webkit-backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
+    backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
+    animation: paper-page-in 0.28s var(--paper-ease);
+  }
+  .paper__scroll {
+    position: absolute;
+    inset: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: contain;
     outline: none;
   }
-  .reader__col {
-    max-width: 660px;
+  .paper__stage--page {
+    /* Reserve side gutters so hanging docks aren't clipped by the scrollport */
+    --dock-gutter: clamp(4.5rem, 12vw, 7.5rem);
+    width: min(
+      calc(var(--paper-col) + 2 * var(--dock-gutter)),
+      100%
+    );
     margin: 0 auto;
-    padding: clamp(2rem, 6vh, 4.5rem) clamp(1.25rem, 5vw, 2rem) 6rem;
+    padding: var(--paper-pad-y-page) var(--dock-gutter) 5.5rem;
+  }
+  .paper__col {
+    position: relative;
+    width: min(var(--paper-col), 100%);
+    margin: 0 auto;
+    background: linear-gradient(
+      to bottom,
+      rgba(237, 241, 242, 0.36) 0%,
+      rgba(237, 241, 242, 0.2) 100%
+    );
+    border: 1px solid var(--paper-hairline);
+    box-shadow: var(--paper-shadow);
+    padding: clamp(1.5rem, 4vh, 2.25rem) var(--paper-pad-x-page)
+      clamp(2rem, 5vh, 2.75rem);
+    -webkit-backdrop-filter: blur(8px) saturate(108%);
+    backdrop-filter: blur(8px) saturate(108%);
+    overflow: visible;
   }
 
-  /* Index of pieces, implying a collection to read through. */
-  .reader__index {
-    margin-bottom: clamp(2.5rem, 7vh, 4rem);
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(45, 51, 56, 0.12);
+  /* Index */
+  .paper__index {
+    margin-bottom: clamp(1.75rem, 4vh, 2.5rem);
+    padding-bottom: 1.15rem;
+    border-bottom: 1px solid var(--paper-hairline);
   }
-  .reader__index-label {
-    display: block;
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
+  .paper__index .paper__label {
     margin-bottom: 0.75rem;
   }
-  .reader__index ol {
+  .paper__index ol {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  .reader__index li {
+  .paper__index li {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.5rem 0;
+    gap: 1.25rem;
+    padding: 0.38rem 0;
   }
-  .reader__index a {
+  .paper__index a {
     color: var(--color-text);
     text-decoration: none;
-    font-size: 0.98rem;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
     border-bottom: 1px solid transparent;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, color 0.15s ease;
   }
-  .reader__index a:hover {
-    border-bottom-color: var(--color-accent);
+  .paper__index a:hover {
+    color: var(--color-accent);
+    border-bottom-color: rgba(148, 35, 31, 0.35);
   }
-  .reader__index time {
+  .paper__index time {
     flex: none;
-    font-size: 0.78rem;
+    font-size: var(--paper-quiet);
     color: var(--color-text-dim);
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
   }
 
-  /* Long-form typography */
-  .prose {
+  /* Long-form */
+  .paper-prose {
     color: var(--color-text);
   }
-  .prose__kicker {
-    font-size: 0.75rem;
-    letter-spacing: 0.22em;
+  .paper-prose__kicker {
+    font-size: var(--paper-label);
+    letter-spacing: var(--paper-label-track);
     text-transform: uppercase;
     color: var(--color-accent);
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.85rem;
   }
-  .prose h1 {
-    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
-    line-height: 1.2;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    margin: 0 0 0.6rem;
+  .paper-prose h1 {
+    font-size: var(--paper-title-page);
+    line-height: 1.22;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.65rem;
   }
-  .prose__meta {
+  .paper-prose__meta {
     color: var(--color-text-dim);
-    font-size: 0.85rem;
-    margin: 0 0 2rem;
+    font-size: var(--paper-quiet);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    margin: 0 0 1.85rem;
   }
-  /* Markdown-rendered body: elements come from <Content/> and carry no scope
-     hash, so they're targeted with :global under the .prose__body wrapper. */
-  .prose__body :global(h2) {
-    font-size: 1.2rem;
-    font-weight: 620;
-    margin: 2.4rem 0 0.7rem;
+  .paper-prose__body :global(h2) {
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 2.2rem 0 0.65rem;
+    color: var(--color-text);
   }
-  .prose__body :global(p) {
+  .paper-prose__body :global(p) {
+    font-size: var(--paper-body);
+    line-height: var(--paper-body-lh);
+    margin: 0 0 1.1em;
+    color: var(--paper-ink);
+  }
+  .paper-prose__body :global(blockquote) {
+    margin: 1.7rem 0;
+    padding: 0.15rem 0 0.15rem 1.1rem;
+    border-left: 2px solid var(--color-accent);
     font-size: 1.02rem;
-    line-height: 1.85;
-    margin: 0 0 1.3rem;
-    color: #3a4147;
-  }
-  .prose__body :global(blockquote) {
-    margin: 2rem 0;
-    padding: 0.4rem 0 0.4rem 1.4rem;
-    border-left: 3px solid var(--color-accent);
-    font-size: 1.1rem;
     line-height: 1.7;
     color: var(--color-text);
   }
-  .prose__end {
-    margin-top: 3rem;
-    text-align: center;
-    letter-spacing: 0.4em;
-    color: var(--color-text-dim);
+  .paper-prose__body :global(blockquote p) {
+    margin: 0;
+    color: inherit;
+  }
+  .paper-prose__end {
+    width: 2rem;
+    height: 1px;
+    margin: 2.75rem auto 0;
+    background: var(--paper-hairline);
+  }
+
+  /*
+    Compact widths: keep docks near content, but don't force them into
+    viewport corners. Slide them onto the top edge of the content box
+    instead of the left/right exterior when gutters get too tight.
+  */
+  @media (max-width: 640px) {
+    .paper--card {
+      padding: 1rem 1rem 1.25rem;
+    }
+    .paper__dock--close {
+      top: 0.55rem;
+      right: 0.55rem;
+      transform: none;
+    }
+    .paper__stage--page {
+      --dock-gutter: 1rem;
+      padding-top: calc(var(--paper-pad-y-page) + 0.25rem);
+    }
+    .paper__dock--back {
+      top: 0;
+      left: 0;
+      transform: translateY(calc(-100% - 0.55rem));
+    }
+    .paper__dock--mark {
+      display: none;
+    }
+  }
+
+  /* Motion */
+  @keyframes paper-scrim-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes paper-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes paper-page-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .about__frame,
-    .reader__surface {
+    .paper__scrim,
+    .paper__stage--card,
+    .paper__veil {
       animation: none;
     }
   }
 </style>
 
 <script>
-  // The set of navigable views. A hash of '#<view>' opens the matching surface.
   const VIEWS = ['about', 'reading'] as const;
   type View = (typeof VIEWS)[number];
 
@@ -419,8 +542,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     return (VIEWS as readonly string[]).includes(key) ? (key as View) : null;
   }
 
-  // Reflect the URL into the DOM. Called on load and on every hash change,
-  // so Back/Forward/deep-links all resolve through this single path.
   function render() {
     const active = currentView();
     for (const view of VIEWS) {
@@ -430,7 +551,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       el.dataset.open = String(open);
       el.setAttribute('aria-hidden', String(!open));
     }
-    // A fresh reading session should start at the top.
     if (active === 'reading' && readingScroll) {
       readingScroll.scrollTop = 0;
       readingScroll.focus({ preventScroll: true });
@@ -438,14 +558,12 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   }
 
   function openView(view: string) {
-    if (location.hash === `#${view}`) return; // avoid duplicate history entries
-    location.hash = `#${view}`; // pushes a history entry -> Back will close it
+    if (location.hash === `#${view}`) return;
+    location.hash = `#${view}`;
   }
 
   function closeView() {
     if (!location.hash) return;
-    // Prefer going Back so Forward can re-open; fall back to clearing the hash
-    // for deep links that have no prior in-app entry.
     if (history.length > 1) {
       history.back();
     } else {
@@ -473,7 +591,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       closeView();
       return;
     }
-    // Enter/Space activates a focused [data-nav] trigger (e.g. the character).
     if (e.key === 'Enter' || e.key === ' ') {
       const el = document.activeElement as HTMLElement | null;
       const view = el?.closest('[data-nav]')?.getAttribute('data-nav');

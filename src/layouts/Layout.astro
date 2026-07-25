@@ -31,6 +31,42 @@ const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
     --color-accent: #94231f; /* single warm accent — the eye color */
     --color-surface: #eef2f3; /* frosted window base */
     --color-shadow: rgba(34, 46, 54, 0.13);
+
+    /* ── Maribbit Paper ─────────────────────────────────────────────
+       Shared material for content carriers (About card, Reading page,
+       and any future sheet). Cool, restrained translucency that sits
+       on the wall rather than floating as iOS glass. */
+    /* More open translucency so the sea / room can breathe through. */
+    --paper-bg: rgba(237, 241, 242, 0.52);
+    --paper-bg-dense: rgba(237, 241, 242, 0.68);
+    --paper-blur: 12px;
+    --paper-saturate: 108%;
+    --paper-edge: rgba(45, 51, 56, 0.09);
+    --paper-hairline: rgba(45, 51, 56, 0.08);
+    --paper-scrim: rgba(34, 46, 54, 0.04);
+    --paper-ink: #3a4147;
+    --paper-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 16px 36px rgba(34, 46, 54, 0.1);
+
+    /* Type scale shared by paper surfaces */
+    --paper-label: 0.68rem;
+    --paper-label-track: 0.2em;
+    --paper-title-card: 1.05rem;
+    --paper-title-page: clamp(1.55rem, 3.8vw, 2.05rem);
+    --paper-body: 0.98rem;
+    --paper-body-lh: 1.8;
+    --paper-quiet: 0.8rem;
+
+    /* Spacing — content-centric, not chrome-centric */
+    --paper-pad-x-card: 1.45rem;
+    --paper-pad-y-card: 1.25rem;
+    --paper-pad-x-page: clamp(1.25rem, 4vw, 2rem);
+    --paper-pad-y-page: clamp(2.5rem, 10vh, 5.5rem);
+    --paper-col: 34.5rem; /* ~552px — calm long-form measure */
+    --paper-rail: 3.25rem; /* side control strip beside content */
+    --paper-gap: 1.1rem; /* space between rail and content */
+    --paper-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   * {
