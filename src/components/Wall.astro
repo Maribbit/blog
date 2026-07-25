@@ -1,23 +1,31 @@
 ---
-// Wall — stage-locked weathered plaster.
+// Wall — stage-locked paper grain.
 //
-// Fixed 1920×1080 viewBox so the texture lives in design coordinates
-// and pans with the stage instead of drifting against the viewport.
-// All noise lives inside <filter> definitions scoped to this viewBox,
-// so the texture stays anchored to the wall as the camera moves.
+// A flat, cool paper field with a very fine grain layer and a quiet
+// radial vignette for depth. No plaster relief, no crackle — the look
+// is closer to a sheet of quality paper than a painted wall.
+//
+// Fixed 1920×1080 viewBox with preserveAspectRatio="none" so the
+// grain maps linearly to the stage dimensions. The noise holds no
+// recognizable geometry, so non-uniform stretching is invisible, but
+// the proportional mapping eliminates vertical parallax between the
+// texture and the window frame (which also moves with 100dvh).
 ---
 
 <div class="wall" aria-hidden="true">
   <svg
     class="wall__svg"
     viewBox="0 0 1920 1080"
-    preserveAspectRatio="xMidYMid slice"
+    preserveAspectRatio="none"
     xmlns="http://www.w3.org/2000/svg"
   >
     <defs>
-      <!-- 滤镜 1：墙面粉刷起伏（低频湍流 + 漫反射光） -->
+      <!-- Paper grain: fine fractalNoise, gently remapped so most
+           pixels land near white and a small tail goes dark. The
+           turbulence itself supplies the dot structure; we just
+           compress its contrast and skew it lighter. -->
       <filter
-        id="bump-filter"
+        id="grain-filter"
         x="0%"
         y="0%"
         width="100%"
@@ -26,107 +34,56 @@
       >
         <feTurbulence
           type="fractalNoise"
-          baseFrequency="0.003 0.008"
-          numOctaves="4"
-          seed="24"
-          result="bumpNoise"
-        />
-        <feDiffuseLighting
-          in="bumpNoise"
-          surfaceScale="2.5"
-          diffuseConstant="1.2"
-          lighting-color="#ffffff"
-        >
-          <feDistantLight azimuth="135" elevation="35" />
-        </feDiffuseLighting>
-      </filter>
-
-      <!-- 滤镜 2：扭曲噪波 + 位移映射 + 锐化，生成无规则点阵的自然裂纹网 -->
-      <filter
-        id="crack-filter"
-        x="0%"
-        y="0%"
-        width="100%"
-        height="100%"
-        filterUnits="objectBoundingBox"
-      >
-        <!-- 打散网格的随机扭曲噪波 -->
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.05"
+          baseFrequency="0.85"
           numOctaves="2"
-          seed="13"
-          result="warp_noise"
+          seed="7"
+          result="grain"
         />
-        <!-- 原始裂纹噪波 -->
-        <feTurbulence
-          type="turbulence"
-          baseFrequency="0.018 0.012"
-          numOctaves="4"
-          seed="88"
-          result="base_veins"
-        />
-        <!-- 位移映射打乱坐标，消灭规则点阵 -->
-        <feDisplacementMap
-          in="base_veins"
-          in2="warp_noise"
-          scale="25"
-          xChannelSelector="R"
-          yChannelSelector="G"
-          result="warped_veins"
-        />
-        <!-- 提取裂纹，slope 降低使裂纹更柔和连贯 -->
-        <feComponentTransfer in="warped_veins" result="sharpVeins">
-          <feFuncR type="linear" slope="10" intercept="-0.15" />
-          <feFuncG type="linear" slope="10" intercept="-0.15" />
-          <feFuncB type="linear" slope="10" intercept="-0.15" />
+        <!-- Skew the noise toward light, so only the darkest ~15% of
+             pixels become visibly dark. slope > 1 lifts contrast,
+             intercept > 0 pushes the whole field brighter. -->
+        <feComponentTransfer in="grain" result="tilted">
+          <feFuncR type="linear" slope="1.6" intercept="0.35" />
+          <feFuncG type="linear" slope="1.6" intercept="0.35" />
+          <feFuncB type="linear" slope="1.6" intercept="0.35" />
         </feComponentTransfer>
-        <!-- 赋予冷灰色调 -->
+        <!-- Now invert: where turbulence was dark, the wall becomes
+             dark ink; where turbulence was light, the wall stays at
+             its base color. Alpha = 1 - luminance gives sparse,
+             non-overlapping specks instead of a full-coverage haze. -->
         <feColorMatrix
-          in="sharpVeins"
+          in="tilted"
           type="matrix"
-          values="0 0 0 0 0.45
-                 0 0 0 0 0.48
-                 0 0 0 0 0.50
-                 -0.33 -0.33 -0.33 0 1"
+          values="0 0 0 0 0
+                  0 0 0 0 0
+                  0 0 0 0 0
+                  -1 0 0 0 1"
         />
       </filter>
 
       <!-- 空间光影：中央透亮、四周柔和暗角 -->
       <radialGradient id="lighting" cx="50%" cy="50%" r="70%">
         <stop offset="20%" stop-color="rgba(0,0,0,0)" />
-        <stop offset="100%" stop-color="rgba(0,0,0,0.05)" />
+        <stop offset="100%" stop-color="rgba(0,0,0,0.035)" />
       </radialGradient>
     </defs>
 
-    <!-- 底色：与 wall.html 一致的冷灰 -->
-    <rect width="1920" height="1080" fill="#E0E2E4" />
+    <!-- 底色：与 Layout.astro 的 --color-bg 一致，冷色纸基 -->
+    <rect width="1920" height="1080" fill="#E8EBEC" />
 
-    <!-- 1. 粉刷起伏（multiply 融合） -->
-    <g style="mix-blend-mode: multiply;" opacity="0.6">
+    <!-- 1. 纸张颗粒（multiply 融合，低不透明度） -->
+    <g style="mix-blend-mode: multiply;" opacity="0.5">
       <rect
         x="0"
         y="0"
         width="1920"
         height="1080"
-        fill="#ffffff"
-        filter="url(#bump-filter)"
+        fill="#1c2024"
+        filter="url(#grain-filter)"
       />
     </g>
 
-    <!-- 2. 有机裂纹（multiply 融合） -->
-    <g style="mix-blend-mode: multiply;" opacity="0.55">
-      <rect
-        x="0"
-        y="0"
-        width="1920"
-        height="1080"
-        fill="#000000"
-        filter="url(#crack-filter)"
-      />
-    </g>
-
-    <!-- 3. 空间光影 -->
+    <!-- 2. 空间光影 -->
     <rect
       x="0"
       y="0"

@@ -67,9 +67,11 @@ import Wall from '../components/Wall.astro';
     One variable set on .room drives every object. Ratios are fixed; no
     element depends on viewport width directly.
 
-    - Window scale: min(1.55 × char height, 1280px). Independent of vw.
+    - char-h scales with viewport HEIGHT so the window always fits with
+      a small top margin, capped at 560px on tall screens.
     - Stage width: max(100%, win-w × 1.08). On narrow viewports the
-      stage is wider than the room, and .room scrolls horizontally.
+      stage is wider than the room, and .room scrolls horizontally —
+      the wall extends past the visible area.
     - Window bottom (sill front) lands on the character's wrist.
     - Frame aspect 1786/964 is never broken.
 
@@ -77,9 +79,16 @@ import Wall from '../components/Wall.astro';
       character canvas     453 × 1380
       wrist-from-bottom    1 − 693.478/1380 ≈ 0.4975
       window aspect        1786 / 964
+      window-to-char ratio 1.55 × 964/1786 ≈ 0.8366
+      vertical span        win-h/char-h + wrist-from-bottom
+                           = 0.8366 + 0.4975 = 1.3341
   */
   .room {
-    --char-h: min(560px, calc(100dvh - 48px));
+    --win-top-margin: 24px;
+    --char-h: min(
+      560px,
+      calc((100dvh - var(--win-top-margin)) / 1.3341)
+    );
     --char-w: calc(var(--char-h) * 453 / 1380);
     --char-wrist-from-bottom: 0.4975;
 
