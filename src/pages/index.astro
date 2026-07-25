@@ -91,6 +91,7 @@ import Desk from '../components/Desk.astro';
       vertical span        win-h/char-h + wrist-from-bottom
                            = 0.8366 + 0.4975 = 1.3341
       desk width           1.4 × win-w
+      vp horizon           computed per perspective.ts from sill ratio
   */
   .room {
     --win-top-margin: 24px;
@@ -113,6 +114,8 @@ import Desk from '../components/Desk.astro';
     --desk-w: calc(var(--win-w) * 1.4);
     --stage-w: max(100%, calc(var(--win-w) * 1.5));
 
+    /* Perspective math (VP, narrowing, sea horizon) lives in
+       src/utils/perspective.ts — runtime JS, not CSS calc. */
     --clock-size: calc(var(--win-w) * 0.072);
     --books-w: calc(var(--win-w) * 0.115);
     --books-h: calc(var(--books-w) * 80 / 200);

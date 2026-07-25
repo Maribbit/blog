@@ -1,25 +1,20 @@
 ---
 // Desk — the surface in front of the character.
 //
-// Stage-locked block in front of the character, so the character's
-// lower body is occluded by the desk top. Two faces only:
-//   - top:    a thin parallelogram, foreshortened depth
-//   - front:  a rectangle hanging from the top's front edge to the
-//             stage floor
+// Stage-locked block with a trapezoidal step-down in the middle.
+// Perspective narrow-fractions are computed via JS at runtime
+// (from the sill-derived vanishing point), then set as plain
+// CSS custom properties on .desk for the clip-paths to consume.
 //
-// The CSS layout places the SVG box in stage coordinates; the SVG
-// itself uses a 100×100 viewBox so all geometry inside is a clean
-// fraction of the desk box.
+//   viewBox 100 × 100, preserveAspectRatio="none"
 //
-//   viewBox 100 × 100
-//   - top face:    y 0 → 11, parallelogram 0..100 / 4..96
-//   - front face:  y 11 → 100, rectangle 0..100
-//
-// Stage geometry:
-//   - center x:        50% of stage
-//   - width:           1.4 × win-w
-//   - height:          0.42 × char_h  (top depth + front face)
-//   - bottom y:        stage floor (0)
+//   Upper left top:   front x  0→30, back displacements 50→20
+//   Left ramp:        top back 20→12, bottom front 0→8 (viewBox y)
+//   Lower middle top: front x 38→62, back displacement 12→-12
+//   Right ramp:       bottom front 8→0, top back -12→-20
+//   Upper right top:  front x 70→100, back displacements -20→-50
+//   Front faces:      vertical drops from each top segment's front
+//                     edge, straight down to y=100
 //
 // z-index 25 (above character 20) so the desk occludes the lower body.
 ---
@@ -31,30 +26,23 @@
     preserveAspectRatio="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <!-- Front face: rectangle from top edge to bottom of viewBox -->
-    <rect
-      class="desk__face desk__face--front"
-      x="0"
-      y="11"
-      width="100"
-      height="89"
-    />
-    <!-- Top face: parallelogram, back edge inset by 4 on each side -->
-    <polygon
-      class="desk__face desk__face--top"
-      points="0,11 100,11 96,0 4,0"
-    />
+    <!-- ═══════════ TOP FACES ═══════════ -->
+    <rect class="desk__face face--upper-left" />
+    <rect class="desk__face face--left-ramp" />
+    <rect class="desk__face face--lower-mid" />
+    <rect class="desk__face face--right-ramp" />
+    <rect class="desk__face face--upper-right" />
+
+    <!-- ═══════════ FRONT FACES ═══════════ -->
+    <rect class="desk__face face--front-left" />
+    <rect class="desk__face face--front-left-ramp" />
+    <rect class="desk__face face--front-mid" />
+    <rect class="desk__face face--front-right-ramp" />
+    <rect class="desk__face face--front-right" />
   </svg>
 </div>
 
 <style>
-  /*
-    The desk box in stage coordinates:
-      - width:  --desk-w (= 1.4 × win-w, defined on .room)
-      - height: 0.42 × char_h  (full slab: top depth + front face)
-    The top sits 0.04 × char_h above the skirt hem so the front face's
-    top edge lands at the hem level.
-  */
   .desk {
     position: absolute;
     left: 50%;
@@ -73,20 +61,93 @@
     overflow: visible;
   }
 
-  /* Top face: lifted off the wall. The wall is #E8EBEC; the desk
-     top sits a clear step brighter so the surface reads at a glance.
-     Not as bright as the window sill's #EFEFEF upper face — that
-     would feel like a different material. Cool, like aged card-stock. */
-  .desk__face--top {
+  .desk__face {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* === TOP FACE COLORS === */
+  .face--upper-left,
+  .face--lower-mid,
+  .face--upper-right {
     fill: #d2d9da;
   }
 
-  /* Front face: shaded under the top, but lighter than the window
-     sill's #ACA8A5 front. That warm dark tone would weigh the desk
-     down too much; this stays cool and only modestly darker than
-     the top, keeping the surface feeling like the same piece of
-     furniture rather than a different material. */
-  .desk__face--front {
+  .face--left-ramp,
+  .face--right-ramp {
+    fill: #bfcbcc;
+  }
+
+  /* === FRONT FACE COLORS === */
+  .face--front-left,
+  .face--front-mid,
+  .face--front-right,
+  .face--front-left-ramp,
+  .face--front-right-ramp {
     fill: #a8b5b6;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     CLIP PATHS — set via JS below as inline styles using the
+     resolved --narrow-frac and --narrow-mid-frac (plain numbers).
+     ═══════════════════════════════════════════════════════════════ */
 </style>
+
+<script>
+  import { getStageGeom, narrowFrac } from '../utils/perspective';
+
+  function applyDeskClipPaths(): void {
+    const desk = document.querySelector<HTMLElement>('.desk');
+    if (!desk) return;
+
+    const g = getStageGeom();
+
+    /* Perspective narrow fractions (plain numbers) */
+    const nf  = narrowFrac(g.deskY17 - g.vpY, g.deskTopY - g.vpY);
+    const nmf = narrowFrac(g.deskY33 - g.vpY, g.deskY17 - g.vpY);
+
+    const NF = nf, NMF = nmf;
+
+    function clip(pts: [number, number][]): string {
+      return 'polygon(' + pts.map(p => p[0] + '% ' + p[1] + '%').join(', ') + ')';
+    }
+
+    const q = (sel: string): HTMLElement => desk.querySelector(sel) as HTMLElement;
+
+    q('.face--upper-left').style.clipPath = clip([
+      [50 * NF, 0],   [30 + 20 * NF, 0],
+      [30, 17],        [0, 17]
+    ]);
+    q('.face--left-ramp').style.clipPath = clip([
+      [30 + 20 * NF, 0],   [38 + 12 * NMF, 17],
+      [38, 33],             [30, 17]
+    ]);
+    q('.face--lower-mid').style.clipPath = clip([
+      [38, 33],             [62, 33],
+      [62 - 12 * NMF, 17],  [38 + 12 * NMF, 17]
+    ]);
+    q('.face--right-ramp').style.clipPath = clip([
+      [62 - 12 * NMF, 17],  [70 - 20 * NF, 0],
+      [70, 17],             [62, 33]
+    ]);
+    q('.face--upper-right').style.clipPath = clip([
+      [70 - 20 * NF, 0],   [100 - 50 * NF, 0],
+      [100, 17],            [70, 17]
+    ]);
+
+    /* Front faces: vertical drops (no perspective) */
+    q('.face--front-left').style.clipPath =
+      'polygon(0% 17%, 30% 17%, 30% 100%, 0% 100%)';
+    q('.face--front-left-ramp').style.clipPath =
+      'polygon(30% 17%, 38% 33%, 38% 100%, 30% 100%)';
+    q('.face--front-mid').style.clipPath =
+      'polygon(38% 33%, 62% 33%, 62% 100%, 38% 100%)';
+    q('.face--front-right-ramp').style.clipPath =
+      'polygon(62% 33%, 70% 17%, 70% 100%, 62% 100%)';
+    q('.face--front-right').style.clipPath =
+      'polygon(70% 17%, 100% 17%, 100% 100%, 70% 100%)';
+  }
+
+  requestAnimationFrame(() => { applyDeskClipPaths(); });
+  window.addEventListener('resize', applyDeskClipPaths);
+</script>

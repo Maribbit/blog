@@ -93,6 +93,8 @@
 </style>
 
 <script>
+  import { getStageGeom, vpYtoWindowViewY } from '../utils/perspective';
+
   // ─────────── Ocean — dynamic low-poly sea ───────────
   // A stack of horizontal "ribbon" layers, each a single <path> whose
   // top edge is a wavy polyline. Layers near the horizon are flat and
@@ -199,6 +201,21 @@
   }
   if (gradStopNear)
     gradStopNear.setAttribute('stop-color', `rgb(${CONFIG.colorNear.join(',')})`);
+
+  // ─────────── Sync sea horizon with vanishing point ───────────
+  // The sea horizon (top of the ocean) should sit at the same level
+  // as the scene's vanishing point, so the distant water converges
+  // correctly with the window sill and desk.
+  let horizonY = CONFIG.seaTopY; /* fallback */
+  try {
+    const geom = getStageGeom();
+    horizonY = vpYtoWindowViewY(geom.vpY, geom);
+  } catch { /* elements not ready yet — use fallback */ }
+  CONFIG.seaTopY = horizonY;
+  if (baseSeaRect) {
+    baseSeaRect.setAttribute('y', String(CONFIG.seaTopY));
+    baseSeaRect.setAttribute('height', String(CONFIG.viewHeight - CONFIG.seaTopY));
+  }
 
   // ─────────── Build the ocean layers ───────────
   if (seaContainer) {
