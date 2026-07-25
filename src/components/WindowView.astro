@@ -18,6 +18,9 @@
 //   3. Ocean   — low-poly dynamic sea along the lower portion
 //   4. Islands — two distant silhouettes straddling the horizon
 //   5. Lighthouse — small structure on the right island
+//
+// Sea and cloud logic are split into src/utils/sea.ts and
+// src/utils/clouds.ts for independent maintenance.
 ---
 
 <div class="window-view" aria-hidden="true">
@@ -28,20 +31,13 @@
     xmlns="http://www.w3.org/2000/svg"
   >
     <defs>
-      <!-- Sky gradient: cool gray-white at the top fading to a slightly
-           lighter tone at the bottom. The gradient covers the entire
-           viewBox so it always reads as sky, even in regions not yet
-           covered by future layers (clouds, ocean, islands, etc). -->
+      <!-- Sky gradient -->
       <linearGradient id="SkyGradient" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#d5d7db" />
         <stop offset="1" stop-color="#e6e6e6" />
       </linearGradient>
 
-      <!-- Base sea gradient: a flat vertical gradient that sits behind
-           the dynamic ocean layers. The dynamic layers paint on top of
-           this so any gap between them reads as calm distant water
-           rather than the sky. Stops are filled in by the script
-           below using the same color parameters as the layers. -->
+      <!-- Base sea gradient (stops filled by src/utils/sea.ts) -->
       <linearGradient id="BaseSeaGradient" x1="0" y1="0" x2="0" y2="1">
         <stop id="grad-stop-far" offset="0%" />
         <stop id="grad-stop-mid" offset="5%" />
@@ -49,9 +45,7 @@
       </linearGradient>
     </defs>
 
-    <!-- Sky: the bottom layer. Fills the entire viewBox so any
-         uncovered region above shows sky. Upper layers will paint on
-         top of this in their own regions. -->
+    <!-- Sky: fills entire viewBox -->
     <rect
       id="Sky"
       x="0"
@@ -61,7 +55,7 @@
       fill="url(#SkyGradient)"
     />
 
-    <!-- Base sea: a flat gradient rect behind the dynamic layers. -->
+    <!-- Base sea gradient rect (re-positioned by sea.ts) -->
     <rect
       id="base-sea-rect"
       x="0"
@@ -71,8 +65,10 @@
       fill="url(#BaseSeaGradient)"
     />
 
-    <!-- Dynamic ocean layers container. The script below fills this
-         with <path> elements, one per layer. -->
+    <!-- Clouds container -->
+    <g id="cloud-layer"></g>
+
+    <!-- Ocean layers container -->
     <g id="sea-layers"></g>
   </svg>
 </div>
@@ -94,276 +90,38 @@
 
 <script>
   import { getStageGeom, vpYtoWindowViewY } from '../utils/perspective';
+  import { buildOcean } from '../utils/sea';
+  import { buildClouds } from '../utils/clouds';
 
-  // ─────────── Ocean — dynamic low-poly sea ───────────
-  // A stack of horizontal "ribbon" layers, each a single <path> whose
-  // top edge is a wavy polyline. Layers near the horizon are flat and
-  // pale; layers near the viewer are taller, darker, and wave more.
-  // Both the Y起伏 and the X横向拉扯 are animated each frame, and
-  // each layer's color breathes around its base tone.
-  //
-  // All numbers below are tuned for the 1698×835 viewBox. They were
-  // ported from a 1920×1080 reference and rescaled by the y-ratio
-  // 0.773 (835/1080) and the x-ratio 0.884 (1698/1920).
+  const VIEW_W = 1698;
+  const VIEW_H = 835;
 
-  function gaussianRandom() {
-    let rand = 0;
-    for (let i = 0; i < 6; i++) rand += Math.random();
-    return (rand - 3) / 3;
-  }
-
-  const CONFIG = {
-    // [1] Base spatial layout (rescaled to 1698×835)
-    viewWidth: 1698,
-    viewHeight: 835,
-    layersCount: 40,
-    seaTopY: 452, // 585 * 0.773
-
-    // [2] Geometry & perspective
-    flatSeaRatio: 0.05,
-    ampYFar: 0,
-    ampYNear: 58, // 75 * 0.773
-    stepXFar: 221, // 250 * 0.884
-    stepXNear: 133, // 150 * 0.884
-    perspectiveYExp: 2.2,
-    perspectiveMeshExp: 2.0,
-
-    // [3] Base colors
-    colorFar: [164, 173, 180],
-    colorNear: [85, 95, 105],
-    colorMinClamp: [70, 80, 90],
-    colorPerspectiveExp: 2.5,
-
-    // [4] Static light & separation
-    varianceFar: 2,
-    varianceNear: 260,
-    colorPeakShift: -0.45,
-    colorSpread: 0.5,
-    layerAltShift: 15,
-    strokeHighlight: 4,
-
-    // [5] Dynamic animation
-    colorAnimAmpFar: 0.5,
-    colorAnimAmpNear: 32,
-    colorAnimSpeed: 0.8,
-    shapeAnimAmpXFar: 5,
-    shapeAnimAmpXNear: 53, // 60 * 0.884
-    shapeAnimSpeedX: 0.5,
-
-    // [6] Kinematics
-    globalTimeSpeed: 0.02,
-  };
-
-  const seaContainer = document.getElementById('sea-layers');
-  const seaData: {
-    element: SVGPathElement;
-    points: {
-      baseX: number;
-      baseY: number;
-      phaseY: number;
-      phaseX: number;
-      ampY: number;
-      ampX: number;
-    }[];
-    speed: number;
-    baseRGB: [number, number, number];
-    colorPhase: number;
-    colorAnimAmp: number;
-  }[] = [];
-
-  // ─────────── Sync the base sea gradient stops ───────────
-  const baseSeaRect = document.getElementById('base-sea-rect');
-  if (baseSeaRect) {
-    baseSeaRect.setAttribute('y', String(CONFIG.seaTopY));
-    baseSeaRect.setAttribute('height', String(CONFIG.viewHeight - CONFIG.seaTopY));
-  }
-
-  const firstPolyProgress = Math.pow(CONFIG.flatSeaRatio, 1 / CONFIG.perspectiveYExp);
-  const firstColorProgress = Math.pow(firstPolyProgress, CONFIG.colorPerspectiveExp);
-  const rBlend = Math.round(
-    CONFIG.colorFar[0] - firstColorProgress * (CONFIG.colorFar[0] - CONFIG.colorNear[0])
-  );
-  const gBlend = Math.round(
-    CONFIG.colorFar[1] - firstColorProgress * (CONFIG.colorFar[1] - CONFIG.colorNear[1])
-  );
-  const bBlend = Math.round(
-    CONFIG.colorFar[2] - firstColorProgress * (CONFIG.colorFar[2] - CONFIG.colorNear[2])
-  );
-
-  const gradStopFar = document.getElementById('grad-stop-far');
-  const gradStopMid = document.getElementById('grad-stop-mid');
-  const gradStopNear = document.getElementById('grad-stop-near');
-  if (gradStopFar)
-    gradStopFar.setAttribute('stop-color', `rgb(${CONFIG.colorFar.join(',')})`);
-  if (gradStopMid) {
-    gradStopMid.setAttribute('offset', `${CONFIG.flatSeaRatio * 100}%`);
-    gradStopMid.setAttribute('stop-color', `rgb(${rBlend},${gBlend},${bBlend})`);
-  }
-  if (gradStopNear)
-    gradStopNear.setAttribute('stop-color', `rgb(${CONFIG.colorNear.join(',')})`);
-
-  // ─────────── Sync sea horizon with vanishing point ───────────
-  // The sea horizon (top of the ocean) should sit at the same level
-  // as the scene's vanishing point, so the distant water converges
-  // correctly with the window sill and desk.
-  let horizonY = CONFIG.seaTopY; /* fallback */
+  /* ─── Vanishing-point driven sea horizon ─── */
+  let seaTopY = 452;
   try {
     const geom = getStageGeom();
-    horizonY = vpYtoWindowViewY(geom.vpY, geom);
-  } catch { /* elements not ready yet — use fallback */ }
-  CONFIG.seaTopY = horizonY;
-  if (baseSeaRect) {
-    baseSeaRect.setAttribute('y', String(CONFIG.seaTopY));
-    baseSeaRect.setAttribute('height', String(CONFIG.viewHeight - CONFIG.seaTopY));
-  }
+    seaTopY = vpYtoWindowViewY(geom.vpY, geom);
+  } catch { /* stage not ready — use fallback */ }
 
-  // ─────────── Build the ocean layers ───────────
-  if (seaContainer) {
-    const svgNS = 'http://www.w3.org/2000/svg';
+  /* ─── Build sea ─── */
+  const seaContainer = document.getElementById('sea-layers') as unknown as SVGGElement;
+  const { animate: seaAnimate } = seaContainer
+    ? buildOcean(seaContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY })
+    : { animate: () => {} };
 
-    for (let i = 0; i < CONFIG.layersCount; i++) {
-      const progress = i / (CONFIG.layersCount - 1);
-      const perspectiveY = Math.pow(progress, CONFIG.perspectiveYExp);
-      const perspectiveMorph = Math.pow(progress, CONFIG.perspectiveMeshExp);
+  /* ─── Build clouds ─── */
+  const cloudContainer = document.getElementById('cloud-layer') as unknown as SVGGElement;
+  const { update: cloudUpdate } = cloudContainer
+    ? buildClouds(cloudContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H })
+    : { update: () => {} };
 
-      if (perspectiveY < CONFIG.flatSeaRatio) continue;
-
-      const baseY =
-        CONFIG.seaTopY + perspectiveY * (CONFIG.viewHeight - CONFIG.seaTopY + 50);
-      const baseStepX =
-        CONFIG.stepXFar - perspectiveMorph * (CONFIG.stepXFar - CONFIG.stepXNear);
-      const layerSpeed = 0.2 + Math.random() * 0.4;
-
-      const currentAmpY =
-        CONFIG.ampYFar + perspectiveMorph * (CONFIG.ampYNear - CONFIG.ampYFar);
-      const currentAnimAmpX =
-        CONFIG.shapeAnimAmpXFar +
-        perspectiveMorph * (CONFIG.shapeAnimAmpXNear - CONFIG.shapeAnimAmpXFar);
-      const currentColorAnimAmp =
-        CONFIG.colorAnimAmpFar +
-        perspectiveMorph * (CONFIG.colorAnimAmpNear - CONFIG.colorAnimAmpFar);
-
-      // Generate the discrete point row for this layer. Points extend
-      // 300px past each side so the X-axis drift never exposes the
-      // viewBox edge.
-      const points: {
-        baseX: number;
-        baseY: number;
-        phaseY: number;
-        phaseX: number;
-        ampY: number;
-        ampX: number;
-      }[] = [];
-      let currentX = -300;
-      while (currentX < CONFIG.viewWidth + 300) {
-        const stepX = baseStepX * (0.6 + Math.random() * 0.8);
-        points.push({
-          baseX: currentX,
-          baseY: baseY,
-          phaseY: currentX * 0.005 + progress * 20 + Math.random() * 3,
-          phaseX: currentX * 0.01 + progress * 10 + Math.random() * 5,
-          ampY: currentAmpY * (0.7 + Math.random() * 0.5),
-          ampX: currentAnimAmpX * (0.5 + Math.random() * 1.0),
-        });
-        currentX += stepX;
-      }
-
-      // Light & color
-      const colorProgress = Math.pow(progress, CONFIG.colorPerspectiveExp);
-      const rBase =
-        CONFIG.colorFar[0] - colorProgress * (CONFIG.colorFar[0] - CONFIG.colorNear[0]);
-      const gBase =
-        CONFIG.colorFar[1] - colorProgress * (CONFIG.colorFar[1] - CONFIG.colorNear[1]);
-      const bBase =
-        CONFIG.colorFar[2] - colorProgress * (CONFIG.colorFar[2] - CONFIG.colorNear[2]);
-
-      const currentVariance =
-        CONFIG.varianceFar +
-        Math.pow(progress, 1.2) * (CONFIG.varianceNear - CONFIG.varianceFar);
-      const currentPeakShift = CONFIG.colorPeakShift * Math.pow(progress, 0.5);
-
-      const rawGaussian = gaussianRandom();
-      const adjustedRandom = rawGaussian * CONFIG.colorSpread + currentPeakShift;
-      let lightOffset = adjustedRandom * currentVariance;
-
-      const altShift =
-        (i % 2 === 0 ? CONFIG.layerAltShift : -CONFIG.layerAltShift) * progress;
-      lightOffset += altShift;
-
-      const initR = Math.round(rBase + lightOffset);
-      const initG = Math.round(gBase + lightOffset);
-      const initB = Math.round(bBase + lightOffset);
-      const layerColorPhase = Math.random() * Math.PI * 2;
-
-      const pathEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
-      pathEl.setAttribute('stroke-width', '1.5');
-      pathEl.setAttribute('stroke-linejoin', 'round');
-      seaContainer.appendChild(pathEl);
-
-      seaData.push({
-        element: pathEl,
-        points: points,
-        speed: layerSpeed,
-        baseRGB: [initR, initG, initB],
-        colorPhase: layerColorPhase,
-        colorAnimAmp: currentColorAnimAmp,
-      });
-    }
-
-    // ─────────── Animation loop ───────────
-    let time = 0;
-    function animate() {
-      time += CONFIG.globalTimeSpeed;
-
-      for (const layer of seaData) {
-        // Lock the far-left edge as the closed start point.
-        let d = `M -300 ${CONFIG.viewHeight} L -300 ${layer.points[0].baseY} `;
-
-        // 1. Dynamic shape (dual-axis: Y起伏 + X横向拉扯)
-        for (const pt of layer.points) {
-          const layerTime = time * layer.speed;
-
-          const waveY1 = Math.sin(pt.phaseY + layerTime);
-          const waveY2 = 0.2 * Math.cos(pt.phaseY * 1.5 - layerTime * 0.6);
-          const currentY = pt.baseY + (waveY1 + waveY2) * pt.ampY;
-
-          const waveX = Math.sin(pt.phaseX + layerTime * CONFIG.shapeAnimSpeedX);
-          const currentX = pt.baseX + waveX * pt.ampX;
-
-          d += `L ${currentX} ${currentY} `;
-        }
-
-        // Lock the far-right edge as the closed end point.
-        d += `L ${CONFIG.viewWidth + 300} ${CONFIG.viewHeight} Z`;
-        layer.element.setAttribute('d', d);
-
-        // 2. Dynamic color breathing
-        const colorWave = Math.sin(time * CONFIG.colorAnimSpeed + layer.colorPhase);
-        const dynamicOffset = colorWave * layer.colorAnimAmp;
-
-        const finalR = Math.max(
-          CONFIG.colorMinClamp[0],
-          Math.min(255, Math.round(layer.baseRGB[0] + dynamicOffset))
-        );
-        const finalG = Math.max(
-          CONFIG.colorMinClamp[1],
-          Math.min(255, Math.round(layer.baseRGB[1] + dynamicOffset))
-        );
-        const finalB = Math.max(
-          CONFIG.colorMinClamp[2],
-          Math.min(255, Math.round(layer.baseRGB[2] + dynamicOffset))
-        );
-
-        const strokeR = Math.min(255, finalR + CONFIG.strokeHighlight);
-        const strokeG = Math.min(255, finalG + CONFIG.strokeHighlight);
-        const strokeB = Math.min(255, finalB + CONFIG.strokeHighlight);
-
-        layer.element.setAttribute('fill', `rgb(${finalR},${finalG},${finalB})`);
-        layer.element.setAttribute('stroke', `rgb(${strokeR},${strokeG},${strokeB})`);
-      }
-
-      requestAnimationFrame(animate);
-    }
+  /* ─── Shared animation loop ─── */
+  let time = 0;
+  function animate(): void {
+    time += 0.02;
+    seaAnimate(time);
+    cloudUpdate();
     requestAnimationFrame(animate);
   }
+  requestAnimationFrame(animate);
 </script>
