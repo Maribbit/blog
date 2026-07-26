@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 110" width="100%" height="100%">
+  <!-- 封底侧面边缘 (Bottom Cover Edge) -->
+  <polygon points="51,79 170,79 170,82 51,82" fill="#4A535A" />
+
+  <!-- 纸张侧面基础色 (Pages Front Edge Base) -->
+  <polygon points="51,72 169,72 169,79 51,79" fill="#F2F5F7" />
+
+  <!-- 纸张顶部阴影 - 表现厚度与封面遮挡带来的几何立体感 (Pages Top Shadow) -->
+  <polygon points="51,72 169,72 169,74 51,74" fill="#D8DEE1" />
+
+  <!-- 纸张左侧阴影 - 靠近深色书脊处的深度 (Pages Left Shadow) -->
+  <polygon points="51,74 56,74 56,79 51,79" fill="#E0E6E9" />
+
+  <!-- 红色书签 - 从纸张中垂下，色彩呼应原图的红眼与红书 (Red Bookmark) -->
+  <polygon points="116,75 124,75 124,103 120,97 116,103" fill="#C62828" />
+
+  <!-- 封面侧面下延唇边 (Front Cover Lip) -->
+  <polygon points="51,70 170,70 170,72 51,72" fill="#67737C" />
+
+  <!-- 书脊侧面 - 垂直面 (Spine Front Face) -->
+  <polygon points="30,70 51,70 51,82 30,82" fill="#353B40" />
+
+  <!-- 书脊顶部 - 平放透视 (Spine Top Face) -->
+  <polygon points="50,15 65,15 51,70 30,70" fill="#525A61" />
+
+  <!-- 封面顶部 - 平放透视 (Main Cover Top Face) -->
+  <polygon points="65,15 150,15 170,70 51,70" fill="#818E97" />
+
+  <!-- 绑带顶部 - 增加细节质感 (Elastic Band Top) -->
+  <polygon points="140,15 146,15 164,70 156,70" fill="#3B434A" />
+
+  <!-- 绑带侧面 (Elastic Band Front) -->
+  <polygon points="156,70 164,70 164,82 156,82" fill="#272C31" />
+</svg>

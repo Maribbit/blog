@@ -12,9 +12,8 @@
 //   49─100: extension front face
 //
 // z-index 25 (above character 20) so desk occludes the lower body.
-//
-// z-index 25 (above character 20) so the desk occludes the lower body.
 import CoffeeCup from './CoffeeCup.astro';
+import Notebook from './Notebook.astro';
 ---
 
 <div class="desk" aria-hidden="true">
@@ -30,6 +29,7 @@ import CoffeeCup from './CoffeeCup.astro';
   </svg>
 
   <CoffeeCup />
+  <Notebook />
 </div>
 
 <style>

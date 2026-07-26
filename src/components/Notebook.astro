@@ -1,0 +1,39 @@
+---
+// Notebook on the desk, to the right of the coffee cup.
+import noteSvg from '../assets/svg/props/Notebook.svg?raw';
+import SvgAsset from './SvgAsset.astro';
+---
+
+<div class="notebook" data-nav="reading" role="button" tabindex="0" aria-label="打开阅读">
+  <SvgAsset content={noteSvg} />
+</div>
+
+<style>
+  .notebook {
+    position: absolute;
+    left: 50%;
+    top: 33%;
+    width: calc(28 * var(--cm));
+    height: calc(28 * var(--cm) * 110 / 200);
+    transform: translate(-50%, -50%);
+    z-index: 26;
+    cursor: pointer;
+  }
+
+  .notebook :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+    transform: scaleY(1.40);
+    transition: transform 0.2s ease;
+  }
+
+  .notebook:hover :global(svg),
+  .notebook:focus-visible :global(svg) {
+    transform: scaleY(1.40) translateY(-3px);
+  }
+
+  .notebook:focus-visible {
+    outline: none;
+  }
+</style>
