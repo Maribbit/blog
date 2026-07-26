@@ -44,6 +44,13 @@ import Desk from '../components/Desk.astro';
     </div>
 
     <Overlays />
+
+    <!-- ──── Scroll indicator bar ──── -->
+    <div class="scroll-bar" id="scroll-bar" aria-hidden="true">
+      <div class="scroll-bar__inner" id="scroll-inner">
+        <div class="scroll-bar__vp" id="scroll-vp"></div>
+      </div>
+    </div>
   </main>
 </Layout>
 
@@ -56,11 +63,74 @@ import Desk from '../components/Desk.astro';
     if (!room || !stage) return;
     const overflow = stage.scrollWidth - room.clientWidth;
     room.scrollLeft = overflow > 0 ? overflow / 2 : 0;
+    updateScrollBar();
   }
 
   centerStage();
   window.addEventListener('resize', centerStage);
   requestAnimationFrame(centerStage);
+
+  /* ──── Scroll indicator bar ──── */
+  function getRoom(): HTMLElement | null {
+    return document.getElementById('room');
+  }
+
+  function updateScrollBar() {
+    const bar = document.getElementById('scroll-bar');
+    const vp = document.getElementById('scroll-vp');
+    const room = getRoom();
+    if (!bar || !vp || !room) return;
+    const overflow = room.scrollWidth - room.clientWidth;
+    if (overflow <= 0) {
+      bar.classList.remove('is-visible');
+      return;
+    }
+    bar.classList.add('is-visible');
+    vp.style.width = ((room.clientWidth / room.scrollWidth) * 100) + '%';
+    vp.style.left = ((room.scrollLeft / room.scrollWidth) * 100) + '%';
+  }
+
+  const _room2 = getRoom();
+  if (_room2) {
+    _room2.addEventListener('scroll', updateScrollBar);
+  }
+  window.addEventListener('resize', updateScrollBar);
+
+  /* ──── Bar: drag to scroll ──── */
+  {
+    const bar = document.getElementById('scroll-bar');
+    if (bar) {
+      let dragging = false;
+      let startX = 0;
+      let startScroll = 0;
+
+      bar.addEventListener('pointerdown', (e) => {
+        const room = getRoom();
+        if (!room) return;
+        const overflow = room.scrollWidth - room.clientWidth;
+        if (overflow <= 0) return;
+        dragging = true;
+        startX = e.clientX;
+        startScroll = room.scrollLeft;
+        bar.setPointerCapture(e.pointerId);
+      });
+
+      bar.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const room = getRoom();
+        if (!room) return;
+        const dx = e.clientX - startX;
+        const barW = bar.clientWidth;
+        const scrollable = room.scrollWidth - room.clientWidth;
+        room.scrollLeft = startScroll + dx * (scrollable / barW);
+      });
+
+      bar.addEventListener('pointerup', () => { dragging = false; });
+      bar.addEventListener('pointercancel', () => { dragging = false; });
+    }
+  }
+
+
 
   /* ─── Desktop: vertical mouse wheel → horizontal scroll ───
      On touch devices the native horizontal scroll works fine (the
@@ -158,6 +228,42 @@ import Desk from '../components/Desk.astro';
 
   .room::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ──── Scroll indicator bar ──── */
+  .scroll-bar {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(90%, 200px);
+    height: 6px;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: rgba(160, 168, 172, 0.35);
+  }
+
+  .scroll-bar.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .scroll-bar__inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Viewport indicator */
+  .scroll-bar__vp {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: rgba(45, 51, 56, 0.2);
+    border-right: 1px solid rgba(45, 51, 56, 0.3);
+    border-left: 1px solid rgba(45, 51, 56, 0.3);
   }
 
   .stage {
