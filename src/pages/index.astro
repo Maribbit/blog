@@ -72,9 +72,9 @@ import Desk from '../components/Desk.astro';
 
     - char-h scales with viewport HEIGHT so the window always fits with
       a small top margin, capped at 560px on tall screens.
-    - Stage width: max(100%, win-w × 1.5). The desk is 1.4 × win-w and
-      is the widest object on stage, so the stage must be at least that
-      wide. The extra 0.1× keeps the wall peeking past the desk edges.
+    - Stage width: max(100%, win-w × 1.8). The desk is 1.4 × win-w and
+      is the widest object on stage. The extension platform adds ~7%
+      perspective overhang each side, so 1.8× gives ~20% breathing room
       On narrow viewports the stage is wider than the room and .room
       scrolls horizontally — the wall extends past the visible area.
     - Stage is centered with margin: 0 auto so the character is centered
@@ -107,12 +107,16 @@ import Desk from '../components/Desk.astro';
     --win-h: calc(var(--win-scale) * 964 / 1786);
 
     /* Desk is wider than the window (1.4×win-w), so the stage must
-       be at least that wide — otherwise the desk overflows the stage
-       and the wall no longer extends past the desk on narrow viewports.
-       Add a small safety margin (1.5×) so the wall peeks past the desk
-       edges instead of the desk being flush with the stage boundary. */
+       be at least that wide. The extension platform adds ~7% visible
+       overhang on each side (perspective widening), so use a 1.8×
+       multiplier to ensure the full desk is scrollable into view. */
     --desk-w: calc(var(--win-w) * 1.4);
-    --stage-w: max(100%, calc(var(--win-w) * 1.5));
+    --stage-w: max(100%, calc(var(--win-w) * 1.8));
+
+    /* Scene scale: 1cm in CSS pixels, derived from the character's
+       fictional height (170cm) mapped to --char-h. Any prop with a
+       known real-world size can be sized with calc(N * var(--cm)). */
+    --cm: calc(var(--char-h) / 170);
 
     /* Perspective math (VP, narrowing, sea horizon) lives in
        src/utils/perspective.ts — runtime JS, not CSS calc. */

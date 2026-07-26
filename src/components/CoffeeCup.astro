@@ -1,0 +1,33 @@
+---
+// Coffee cup on the desk, centered in the lower-mid trapezoid.
+import cupSvg from '../assets/svg/props/CoffeeCup.svg?raw';
+import SvgAsset from './SvgAsset.astro';
+---
+
+<div class="coffee-cup" aria-hidden="true">
+  <SvgAsset content={cupSvg} />
+</div>
+
+<style>
+  /*
+    Positioned on the lower-mid trapezoid (viewBox y=17→33),
+    centered horizontally, near the back edge (toward the character).
+    Smaller top% = closer to character (back of desk).
+  */
+  .coffee-cup {
+    position: absolute;
+    left: 50%;
+    top: 25%;
+    width: calc(16 * var(--cm));
+    height: calc(18 * var(--cm));
+    transform: translate(-50%, -50%);
+    z-index: 26;
+    pointer-events: none;
+  }
+
+  .coffee-cup :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>

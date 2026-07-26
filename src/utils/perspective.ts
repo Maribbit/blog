@@ -50,6 +50,7 @@ const VP_WIN_W_COEFF = 295.97; /* constant in the expanded VP formula */
 const DESK_HEIGHT_FRAC = 0.42;     /* desk element height as fraction of charH */
 const VB_Y17 = 17;                 /* viewBox y for upper-top front edge */
 const VB_Y33 = 33;                 /* viewBox y for lower-middle front edge */
+const VB_Y49 = 49;                 /* viewBox y for extension front edge (same depth as lower-mid) */
 
 /* ──────── Types ──────── */
 export interface StageGeom {
@@ -72,6 +73,8 @@ export interface StageGeom {
   deskY17: number;
   /** Desk viewBox y=33 in viewport coords */
   deskY33: number;
+  /** Desk viewBox y=49 in viewport coords */
+  deskY49: number;
 }
 
 /* ──────── API ──────── */
@@ -100,8 +103,9 @@ export function getStageGeom(): StageGeom {
   const deskTopY = innerH - charH * DESK_HEIGHT_FRAC;
   const deskY17  = deskTopY + charH * DESK_HEIGHT_FRAC * VB_Y17 / 100;
   const deskY33  = deskTopY + charH * DESK_HEIGHT_FRAC * VB_Y33 / 100;
+  const deskY49  = deskTopY + charH * DESK_HEIGHT_FRAC * VB_Y49 / 100;
 
-  return { innerH, charH, winW, winH, winTop, vpY, deskTopY, deskY17, deskY33 };
+  return { innerH, charH, winW, winH, winTop, vpY, deskTopY, deskY17, deskY33, deskY49 };
 }
 
 /**

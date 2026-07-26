@@ -1,22 +1,20 @@
 ---
-// Desk — the surface in front of the character.
+// Desk — SVG <path> faces generated at runtime by JS.
 //
-// Stage-locked block with a trapezoidal step-down in the middle.
-// Perspective narrow-fractions are computed via JS at runtime
-// (from the sill-derived vanishing point), then set as plain
-// CSS custom properties on .desk for the clip-paths to consume.
+// 14 faces: 5 top, 5 front, 4 extension (full-width forward platform).
+// viewBox 100×100, preserveAspectRatio="none".
 //
-//   viewBox 100 × 100, preserveAspectRatio="none"
+// Geometry (viewBox y):
+//   0─17  : upper-left / upper-right top faces
+//   0─33  : left / right ramps
+//   17─100: front faces (vertical drops)
+//   33─49 : extension platform (full-width, perspective-widened)
+//   49─100: extension front face
 //
-//   Upper left top:   front x  0→30, back displacements 50→20
-//   Left ramp:        top back 20→12, bottom front 0→8 (viewBox y)
-//   Lower middle top: front x 38→62, back displacement 12→-12
-//   Right ramp:       bottom front 8→0, top back -12→-20
-//   Upper right top:  front x 70→100, back displacements -20→-50
-//   Front faces:      vertical drops from each top segment's front
-//                     edge, straight down to y=100
+// z-index 25 (above character 20) so desk occludes the lower body.
 //
 // z-index 25 (above character 20) so the desk occludes the lower body.
+import CoffeeCup from './CoffeeCup.astro';
 ---
 
 <div class="desk" aria-hidden="true">
@@ -24,22 +22,14 @@
     class="desk__svg"
     viewBox="0 0 100 100"
     preserveAspectRatio="none"
+    overflow="visible"
+    shape-rendering="geometricPrecision"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <!-- ═══════════ TOP FACES ═══════════ -->
-    <rect class="desk__face face--upper-left" />
-    <rect class="desk__face face--left-ramp" />
-    <rect class="desk__face face--lower-mid" />
-    <rect class="desk__face face--right-ramp" />
-    <rect class="desk__face face--upper-right" />
-
-    <!-- ═══════════ FRONT FACES ═══════════ -->
-    <rect class="desk__face face--front-left" />
-    <rect class="desk__face face--front-left-ramp" />
-    <rect class="desk__face face--front-mid" />
-    <rect class="desk__face face--front-right-ramp" />
-    <rect class="desk__face face--front-right" />
+    <!-- All faces generated as <path> by JS (no clip-path, no seams) -->
   </svg>
+
+  <CoffeeCup />
 </div>
 
 <style>
@@ -61,36 +51,7 @@
     overflow: visible;
   }
 
-  .desk__face {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* === TOP FACE COLORS === */
-  .face--upper-left,
-  .face--lower-mid,
-  .face--upper-right {
-    fill: #d2d9da;
-  }
-
-  .face--left-ramp,
-  .face--right-ramp {
-    fill: #bfcbcc;
-  }
-
-  /* === FRONT FACE COLORS === */
-  .face--front-left,
-  .face--front-mid,
-  .face--front-right,
-  .face--front-left-ramp,
-  .face--front-right-ramp {
-    fill: #a8b5b6;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     CLIP PATHS — set via JS below as inline styles using the
-     resolved --narrow-frac and --narrow-mid-frac (plain numbers).
-     ═══════════════════════════════════════════════════════════════ */
+  /* All faces rendered as SVG <path> elements by JS below. */
 </style>
 
 <script>
@@ -101,51 +62,78 @@
     if (!desk) return;
 
     const g = getStageGeom();
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = desk.querySelector('svg')!;
 
-    /* Perspective narrow fractions (plain numbers) */
+    /* Perspective narrow fractions */
     const nf  = narrowFrac(g.deskY17 - g.vpY, g.deskTopY - g.vpY);
     const nmf = narrowFrac(g.deskY33 - g.vpY, g.deskY17 - g.vpY);
+    const extNf = narrowFrac(g.deskY49 - g.vpY, g.deskY33 - g.vpY);
+    const fullWiden = 50 * extNf / (1 - extNf);
+    const NF = nf, NMF = nmf, FW = fullWiden;
 
-    const NF = nf, NMF = nmf;
+    /* Color map */
+    const C = {
+      top:      '#d2d9da',
+      ramp:     '#bfcbcc',
+      front:    '#a8b5b6',
+      extTop:   '#d2d9da',
+      extFront: '#a8b5b6',
+    };
 
-    function clip(pts: [number, number][]): string {
-      return 'polygon(' + pts.map(p => p[0] + '% ' + p[1] + '%').join(', ') + ')';
+    /* Tiny overlap to seal sub-pixel anti-aliasing gaps between
+       adjacent faces (~0.24px at 1200px desk width). */
+    const E = 0.02;
+
+    /* definition: { id, d, fill } */
+    const faceDefs = [
+      /* ─── Top faces (bottom edges pushed down by E) ─── */
+      { id: 'df-upper-left', fill: C.top,
+        d: `M ${50*NF} 0 L ${30+20*NF} 0 L 30 ${17+E} L 0 ${17+E} Z` },
+      { id: 'df-left-ramp', fill: C.ramp,
+        d: `M ${30+20*NF} 0 L ${38+12*NMF} ${17+E} L 38 ${33+E} L 30 ${17+E} Z` },
+      { id: 'df-lower-mid', fill: C.top,
+        d: `M 38 ${33+E} L 62 ${33+E} L ${62-12*NMF} ${17+E} L ${38+12*NMF} ${17+E} Z` },
+      { id: 'df-right-ramp', fill: C.ramp,
+        d: `M ${62-12*NMF} ${17+E} L ${70-20*NF} 0 L 70 ${17+E} L 62 ${33+E} Z` },
+      { id: 'df-upper-right', fill: C.top,
+        d: `M ${70-20*NF} 0 L ${100-50*NF} 0 L 100 ${17+E} L 70 ${17+E} Z` },
+
+      /* ─── Front faces (top edges pushed up by E) ─── */
+      { id: 'df-front-left', fill: C.front,
+        d: `M 0 ${17-E} L 30 ${17-E} L 30 100 L 0 100 Z` },
+      { id: 'df-front-left-ramp', fill: C.front,
+        d: `M 30 ${17-E} L 38 ${33-E} L 38 100 L 30 100 Z` },
+      { id: 'df-front-mid', fill: C.front,
+        d: `M 38 ${33-E} L 62 ${33-E} L 62 100 L 38 100 Z` },
+      { id: 'df-front-right-ramp', fill: C.front,
+        d: `M 62 ${33-E} L 70 ${17-E} L 70 100 L 62 100 Z` },
+      { id: 'df-front-right', fill: C.front,
+        d: `M 70 ${17-E} L 100 ${17-E} L 100 100 L 70 100 Z` },
+
+      /* ─── Extension faces ─── */
+      { id: 'df-ext-left', fill: C.extFront,
+        d: `M ${-FW} ${49+E} L 0 ${33-E} L 0 100 L ${-FW} 100 Z` },
+      { id: 'df-ext-right', fill: C.extFront,
+        d: `M 100 ${33-E} L ${100+FW} ${49+E} L ${100+FW} 100 L 100 100 Z` },
+      { id: 'df-ext-front', fill: C.extFront,
+        d: `M ${-FW} ${49-E} L ${100+FW} ${49-E} L ${100+FW} 100 L ${-FW} 100 Z` },
+      { id: 'df-ext-top', fill: C.extTop,
+        d: `M ${-FW} ${49+E} L ${100+FW} ${49+E} L 100 ${33-E} L 0 ${33-E} Z` },
+    ];
+
+    /* Create or update each fill-only <path>. */
+    for (const f of faceDefs) {
+      let el = svg.querySelector<SVGPathElement>('#' + f.id);
+      if (!el) {
+        el = document.createElementNS(svgNS, 'path');
+        el.id = f.id;
+        el.setAttribute('stroke', 'none');
+        svg.appendChild(el);
+      }
+      el.setAttribute('d', f.d);
+      el.setAttribute('fill', f.fill);
     }
-
-    const q = (sel: string): HTMLElement => desk.querySelector(sel) as HTMLElement;
-
-    q('.face--upper-left').style.clipPath = clip([
-      [50 * NF, 0],   [30 + 20 * NF, 0],
-      [30, 17],        [0, 17]
-    ]);
-    q('.face--left-ramp').style.clipPath = clip([
-      [30 + 20 * NF, 0],   [38 + 12 * NMF, 17],
-      [38, 33],             [30, 17]
-    ]);
-    q('.face--lower-mid').style.clipPath = clip([
-      [38, 33],             [62, 33],
-      [62 - 12 * NMF, 17],  [38 + 12 * NMF, 17]
-    ]);
-    q('.face--right-ramp').style.clipPath = clip([
-      [62 - 12 * NMF, 17],  [70 - 20 * NF, 0],
-      [70, 17],             [62, 33]
-    ]);
-    q('.face--upper-right').style.clipPath = clip([
-      [70 - 20 * NF, 0],   [100 - 50 * NF, 0],
-      [100, 17],            [70, 17]
-    ]);
-
-    /* Front faces: vertical drops (no perspective) */
-    q('.face--front-left').style.clipPath =
-      'polygon(0% 17%, 30% 17%, 30% 100%, 0% 100%)';
-    q('.face--front-left-ramp').style.clipPath =
-      'polygon(30% 17%, 38% 33%, 38% 100%, 30% 100%)';
-    q('.face--front-mid').style.clipPath =
-      'polygon(38% 33%, 62% 33%, 62% 100%, 38% 100%)';
-    q('.face--front-right-ramp').style.clipPath =
-      'polygon(62% 33%, 70% 17%, 70% 100%, 62% 100%)';
-    q('.face--front-right').style.clipPath =
-      'polygon(70% 17%, 100% 17%, 100% 100%, 70% 100%)';
   }
 
   requestAnimationFrame(() => { applyDeskClipPaths(); });
