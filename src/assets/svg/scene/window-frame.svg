@@ -1,0 +1,24 @@
+<svg class="window__svg" viewBox="0 0 1786 964" preserveAspectRatio="xMidYMid meet" overflow="visible" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="sill-cast-shadow" x="-10%" y="-100%" width="120%" height="300%" filterUnits="objectBoundingBox">
+      <feGaussianBlur stdDeviation="10" />
+    </filter>
+  </defs>
+
+  <!-- ════════ FRAME INNER BEVELS ════════ -->
+  <path id="Frame_Upper_Inner" d="M 33 32 L 1753 32 L 1731 45 L 56 45 Z" fill="#B4B5B9" />
+  <path id="Frame_Right_Inner" d="M 1753 32 L 1753 888 L 1731 880 L 1731 45 Z" fill="#E3E3E3" />
+  <path id="Frame_Left_Inner" d="M 33 32 L 33 888 L 56 880 L 56 45 Z" fill="#E3E3E3" />
+  <path id="Frame_Bottom_Inner" d="M 56 880 L 1731 880 L 1753 888 L 33 888 Z" fill="#F0F0F0" />
+
+  <!-- ════════ FRAME FRONT FACES ════════ -->
+  <rect id="Frame_Upper_Front" x="0" y="0" width="1786" height="32" fill="#A5A5A5" />
+  <rect id="Frame_Right_Front" x="1753" y="32" width="33" height="856" fill="#A5A5A5" />
+  <rect id="Frame_Left_Front" x="0" y="32" width="33" height="856" fill="#A5A5A5" />
+  <rect id="Frame_Lower_Front" x="0" y="888" width="1786" height="30" fill="#B5B5B7" />
+
+  <!-- ════════ WINDOWSILL ════════ -->
+  <path id="Windowsill_Upper" d="M 0 918 L 1786 918 L 1861 939 L -75 939 Z" fill="#EFEFEF" />
+  <rect id="Windowsill_Front" x="-75" y="939" width="1936" height="25" fill="#ACA8A5" />
+  <ellipse id="Sill_Cast_Shadow" cx="893" cy="970" rx="968" ry="14" fill="rgba(34, 46, 54, 0.34)" filter="url(#sill-cast-shadow)" />
+</svg>

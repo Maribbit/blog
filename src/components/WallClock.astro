@@ -40,9 +40,12 @@
 </style>
 
 <script>
+  import { register } from '../utils/animation-loop';
+
   const hour = document.getElementById('hand-hour');
   const minute = document.getElementById('hand-minute');
   const second = document.getElementById('hand-second');
+  let lastSec = -1;
 
   function tick() {
     const now = new Date();
@@ -59,6 +62,13 @@
     if (second) second.style.transform = `rotate(${secDeg}deg)`;
   }
 
+  // Immediate first render, then sync to real seconds via shared rAF loop.
   tick();
-  setInterval(tick, 1000);
+  register(() => {
+    const s = Math.floor(Date.now() / 1000);
+    if (s !== lastSec) {
+      lastSec = s;
+      tick();
+    }
+  });
 </script>

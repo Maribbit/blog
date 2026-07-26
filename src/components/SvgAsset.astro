@@ -1,0 +1,36 @@
+---
+/**
+ * SvgAsset — inject a raw SVG string into the DOM.
+ *
+ * Accepts an SVG imported via `?raw`. Keeps SVG markup out of
+ * component templates for cleaner separation.
+ *
+ * Usage:
+ * ```astro
+ * ---
+ * import svgContent from '../assets/svg/props/coffee-cup.svg?raw';
+ * import SvgAsset from '../components/SvgAsset.astro';
+ * ---
+ * <SvgAsset content={svgContent} ariaHidden={true} />
+ * ```
+ */
+
+interface Props {
+  /** Raw SVG string from `?raw` import */
+  content: string;
+  /** CSS class on the wrapper (default: none) */
+  class?: string;
+  /** aria-hidden (default: true — decorative SVGs) */
+  ariaHidden?: boolean;
+}
+
+const { content, class: className, ariaHidden = true } = Astro.props;
+---
+
+{
+  className ? (
+    <div class:list={[className]} set:html={content} aria-hidden={ariaHidden ? 'true' : undefined} />
+  ) : (
+    <Fragment set:html={content} aria-hidden={ariaHidden ? 'true' : undefined} />
+  )
+}

@@ -1,26 +1,14 @@
 ---
 // WindowView — the scene visible through the open window.
 //
-// Separate from the frame so the scenery can be swapped independently
-// (day/night, different locations, animations, etc).
-//
-// The viewBox matches the glass opening of the frame: 1698 x 835.
-// The frame component renders this view behind itself, sized to fit the
-// opening exactly.
-//
-// The scene is a stack of layers, drawn bottom-up so each upper layer
-// paints over the one below it. Every layer fills the full viewBox
-// (or as much as it needs) so the layers STACK, not tile — there is
-// no horizontal dividing line between them, and any uncovered region
-// shows the layer below.
+// Layer stack (bottom → top):
 //   1. Sky     — vertical gradient, full viewBox
-//   2. Clouds  — soft white shapes floating in the sky
-//   3. Ocean   — low-poly dynamic sea along the lower portion
-//   4. Islands — two distant silhouettes straddling the horizon
-//   5. Lighthouse — small structure on the right island
+//   2. Clouds  — drifting 2.5D cloud shapes (src/utils/clouds.ts)
+//   3. Islands — distant islands + lighthouse (src/utils/islands.ts)
+//   4. Ocean   — low-poly animated sea (src/utils/sea.ts)  ← on top so
+//                waves overlap island bases naturally
 //
-// Sea and cloud logic are split into src/utils/sea.ts and
-// src/utils/clouds.ts for independent maintenance.
+// The viewBox (1698×835) matches the frame glass opening exactly.
 ---
 
 <div class="window-view" aria-hidden="true">
@@ -126,12 +114,11 @@
   }
 
   /* ─── Shared animation loop ─── */
+  import { register } from '../utils/animation-loop';
   let time = 0;
-  function animate(): void {
+  register(() => {
     time += 0.02;
     seaAnimate(time);
     cloudUpdate();
-    requestAnimationFrame(animate);
-  }
-  requestAnimationFrame(animate);
+  });
 </script>

@@ -1,7 +1,6 @@
 /**
- * Distant islands + lighthouse — exact SVG paths from
- * Lighthouse_And_Islands.svg, positioned in the WindowView viewBox
- * with a single group transform.
+ * Distant islands + lighthouse — exact SVG paths originally authored
+ * in Lighthouse_And_Islands.svg, now embedded here as constants.
  *
  * Z-order (back to front):
  *   1. Island_Right  (#A8B5BB)
@@ -10,7 +9,7 @@
  *   4. Island_Left    (#B6BFC4)  — front, overlaps lighthouse base
  *
  * The right island's right edge extends past viewWidth so it's
- * partially clipped (not fully露出).
+ * partially clipped (not fully exposed).
  */
 
 /* ──────── Types ──────── */
@@ -55,6 +54,7 @@ const LIGHTHOUSE_PARTS: LhPart[] = [
 ];
 
 /* ──────── Island fills (exact from SVG) ──────── */
+/* Island fills (from Lighthouse_And_Islands.svg) */
 const ISLAND_COLORS = {
   right: '#A8B5BB',
   middle: '#AFBAC0',

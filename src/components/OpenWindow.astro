@@ -1,177 +1,14 @@
 ---
 // OpenWindow — the window frame + windowsill.
 //
-// The scenery is a SEPARATE component (WindowView.astro) rendered behind
-// this frame, so the view can be swapped independently.
-//
-// Coordinate system: viewBox is 1786 x 964, matching the FRAME width.
-// The frame occupies the full viewBox (x: 0..1786, y: 0..964). The
-// windowsill overhangs the frame by 75px on each side (x: -75..1861),
-// drawn via SVG overflow:visible so the element's box stays the frame width.
-//
-// Glass opening (where WindowView shows through): x: 33..1753, y: 45..880.
-// The parent positions WindowView to exactly cover this opening.
-//
-// Flat colors:
-//   Frame front (top/sides):  #A5A5A5
-//   Frame front (bottom):    #B5B5B7
-//   Frame upper inner bevel: #B4B5B9
-//   Frame side inner bevels: #E3E3E3
-//   Frame bottom inner:      #F0F0F0
-//   Windowsill upper:        #EFEFEF
-//   Windowsill front:        #ACA8A5
+// SVG paths live in src/assets/svg/scene/window-frame.svg.
+// Imported via ?raw and injected by SvgAsset.
+import frameSvg from '../assets/svg/scene/window-frame.svg?raw';
+import SvgAsset from './SvgAsset.astro';
 ---
 
 <div class="window" aria-hidden="true">
-  <svg
-    class="window__svg"
-    viewBox="0 0 1786 964"
-    preserveAspectRatio="xMidYMid meet"
-    overflow="visible"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <defs>
-      <!--
-        Sill cast shadow — soft, wide blur so the windowsill reads as
-        physically projecting onto the wall. Painted as an SVG element
-        (not a CSS box-shadow on a div) so it lives in the same plane
-        as the wall texture, not on a separate HTML box. stdDeviation
-        is generous so the +75px overhang on each side still has a
-        soft penumbra, and the ellipse is wider than the sill so the
-        shadow does not stop abruptly at the frame edge.
-      -->
-      <filter
-        id="sill-cast-shadow"
-        x="-10%"
-        y="-100%"
-        width="120%"
-        height="300%"
-        filterUnits="objectBoundingBox"
-      >
-        <feGaussianBlur stdDeviation="10" />
-      </filter>
-    </defs>
-
-    <!-- ════════ FRAME INNER BEVELS ════════
-         Drawn before the front faces so the front faces visually "cap" them.
-         These are the bright inner edges that catch light from inside. -->
-
-    <!-- Upper inner bevel: from outer top y=32 angling down to y=45 -->
-    <path
-      id="Frame_Upper_Inner"
-      d="M 33 32 L 1753 32 L 1731 45 L 56 45 Z"
-      fill="#B4B5B9"
-    />
-
-    <!-- Right inner bevel -->
-    <path
-      id="Frame_Right_Inner"
-      d="M 1753 32 L 1753 888 L 1731 880 L 1731 45 Z"
-      fill="#E3E3E3"
-    />
-
-    <!-- Left inner bevel -->
-    <path
-      id="Frame_Left_Inner"
-      d="M 33 32 L 33 888 L 56 880 L 56 45 Z"
-      fill="#E3E3E3"
-    />
-
-    <!-- Bottom inner bevel -->
-    <path
-      id="Frame_Bottom_Inner"
-      d="M 56 880 L 1731 880 L 1753 888 L 33 888 Z"
-      fill="#F0F0F0"
-    />
-
-    <!-- ════════ FRAME FRONT FACES ════════ -->
-
-    <!-- Upper frame front -->
-    <rect
-      id="Frame_Upper_Front"
-      x="0"
-      y="0"
-      width="1786"
-      height="32"
-      fill="#A5A5A5"
-    />
-
-    <!-- Right frame front -->
-    <rect
-      id="Frame_Right_Front"
-      x="1753"
-      y="32"
-      width="33"
-      height="856"
-      fill="#A5A5A5"
-    />
-
-    <!-- Left frame front -->
-    <rect
-      id="Frame_Left_Front"
-      x="0"
-      y="32"
-      width="33"
-      height="856"
-      fill="#A5A5A5"
-    />
-
-    <!-- Bottom frame front -->
-    <rect
-      id="Frame_Lower_Front"
-      x="0"
-      y="888"
-      width="1786"
-      height="30"
-      fill="#B5B5B7"
-    />
-
-    <!-- ════════ WINDOWSILL ════════
-         Overhangs the frame by 75px on each side (x: -75..1861). -->
-
-    <!-- Windowsill upper surface (angled top) -->
-    <path
-      id="Windowsill_Upper"
-      d="M 0 918 L 1786 918 L 1861 939 L -75 939 Z"
-      fill="#EFEFEF"
-    />
-
-    <!-- Windowsill front face -->
-    <rect
-      id="Windowsill_Front"
-      x="-75"
-      y="939"
-      width="1936"
-      height="25"
-      fill="#ACA8A5"
-    />
-
-    <!--
-      Cast shadow of the windowsill onto the wall.
-      Drawn after the sill so it overlaps the bottom edge of the sill
-      front face (where light is occluded most), then is blurred and
-      faded. Tinted with the same cool gray used by the character
-      contact shadow (--color-shadow) so the whole room reads with
-      one light source.
-    -->
-    <!--
-      Width matches the sill front face exactly: x = -75 .. 1861
-      (1936 wide in viewBox coords), so rx = 968 with cx at 893 puts
-      the shadow's strongest band right under the visible sill. The
-      75px overhang on each side does not extend the shadow further
-      because in 2.5D those side wings are the top surface of the
-      sill, not the face that occludes light from above.
-    -->
-    <ellipse
-      id="Sill_Cast_Shadow"
-      cx="893"
-      cy="970"
-      rx="968"
-      ry="14"
-      fill="rgba(34, 46, 54, 0.34)"
-      filter="url(#sill-cast-shadow)"
-    />
-  </svg>
+  <SvgAsset content={frameSvg} class="window__svg" />
 </div>
 
 <style>
@@ -179,15 +16,12 @@
     width: 100%;
     height: 100%;
     display: block;
-    /* Allow the overhanging sill to render outside the element box. */
     overflow: visible;
   }
 
-  .window__svg {
+  :global(.window__svg) {
     width: 100%;
     height: 100%;
     display: block;
-    /* SVG overflow:visible is set as an attribute on the <svg> above so the
-       sill (which extends past the viewBox) still renders. */
   }
 </style>
