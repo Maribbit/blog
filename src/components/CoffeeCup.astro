@@ -6,14 +6,21 @@ import SvgAsset from './SvgAsset.astro';
 
 <div class="coffee-cup" aria-hidden="true">
   <SvgAsset content={cupSvg} />
+  <svg
+    class="steam"
+    viewBox="0 0 100 100"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <defs>
+      <filter id="steam-blur" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2" />
+      </filter>
+    </defs>
+    <g filter="url(#steam-blur)" id="steam-group"></g>
+  </svg>
 </div>
 
 <style>
-  /*
-    Positioned on the lower-mid trapezoid (viewBox y=17→33),
-    centered horizontally, near the back edge (toward the character).
-    Smaller top% = closer to character (back of desk).
-  */
   .coffee-cup {
     position: absolute;
     left: 50%;
@@ -25,9 +32,103 @@ import SvgAsset from './SvgAsset.astro';
     pointer-events: none;
   }
 
-  .coffee-cup :global(svg) {
+  .coffee-cup :global(svg:not(.steam)) {
     width: 100%;
     height: 100%;
     display: block;
   }
+
+  .steam {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Shift steam origin to the cup's coffee surface (~ y=37.5 in
+       viewBox 100×100), keeping the viewBox matching the cup. */
+  }
 </style>
+
+<script>
+  import { register } from '../utils/animation-loop';
+
+  /* ─── Steam wisp parameters ─── */
+  interface Wisp {
+    el: SVGPathElement;
+    phase: number;      // random start offset
+    speed: number;      // rise speed multiplier
+    ampX: number;       // horizontal sway amplitude
+    riseSpan: number;   // how far up it travels (in viewBox Y)
+    baseX: number;      // center X in viewBox coords
+    baseY: number;      // origin Y in viewBox coords
+    thick: number;      // curve spread
+  }
+
+  function buildSteam(): void {
+    const group = document.getElementById('steam-group') as unknown as SVGGElement;
+    if (!group) return;
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    /* 3 wisps rising from the coffee surface (x=50, y≈38) */
+    const wisps: Wisp[] = [];
+    const n = 3;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElementNS(svgNS, 'path');
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', '#ffffff');
+      el.setAttribute('stroke-width', '2');
+      el.setAttribute('stroke-linecap', 'round');
+      el.setAttribute('opacity', String(0.4 + Math.random() * 0.3));
+      group.appendChild(el);
+
+      wisps.push({
+        el,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.25 + Math.random() * 0.2,
+        ampX: 2 + Math.random() * 3,
+        riseSpan: 15 + Math.random() * 12,
+        baseX: 48 + (Math.random() - 0.5) * 8,
+        baseY: 38,
+        thick: 3 + Math.random() * 3,
+      });
+    }
+
+    /* Animate each frame */
+    let time = 0;
+    register(() => {
+      time += 0.015;
+      for (const w of wisps) {
+        /* Wisp progresses upward, then loops */
+        const t = (time * w.speed + w.phase) % 1;
+        const y = w.baseY - t * w.riseSpan;
+        const sway = Math.sin(t * Math.PI * 3 + w.phase) * w.ampX * t;
+        const fade = Math.sin(t * Math.PI) * 0.9 + 0.1; // 0→1→0
+
+        /* Build a bezier curve: three control points for a gentle
+           S-shape that drifts with the sway. */
+        const x0 = w.baseX;
+        const x1 = w.baseX + sway * 0.3;
+        const x2 = w.baseX + sway * 0.6;
+        const x3 = w.baseX + sway;
+        const y0 = y;
+        const y1 = y - w.riseSpan * 0.3;
+        const y2 = y - w.riseSpan * 0.6;
+        const y3 = y - w.riseSpan * 0.9;
+        const cx1 = x0 + (x1 - x0) * 0.3 + (Math.sin(t * 1.7 + w.phase) * w.thick * 0.15);
+        const cy1 = y0 + (y1 - y0) * 0.3;
+        const cx2 = x2 - (x2 - x3) * 0.3 + (Math.sin(t * 2.1 + w.phase) * w.thick * 0.15);
+        const cy2 = y2 - (y2 - y3) * 0.3;
+
+        w.el.setAttribute('d', `M ${x0} ${y0} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x3} ${y3}`);
+        w.el.setAttribute('opacity', String(fade * 0.5));
+      }
+    });
+  }
+
+  /* Wait for DOM, then start */
+  if (document.readyState === 'complete') {
+    buildSteam();
+  } else {
+    window.addEventListener('load', buildSteam);
+  }
+</script>
