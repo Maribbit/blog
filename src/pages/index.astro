@@ -61,6 +61,30 @@ import Desk from '../components/Desk.astro';
   centerStage();
   window.addEventListener('resize', centerStage);
   requestAnimationFrame(centerStage);
+
+  /* ─── Desktop: vertical mouse wheel → horizontal scroll ───
+     On touch devices the native horizontal scroll works fine (the
+     room already has overflow-x: auto).  On desktop, intercept the
+     wheel event and translate deltaY (and deltaX) into scrollLeft
+     movement, so users can scroll the room vertically as expected. */
+  if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) {
+    const room = document.getElementById('room');
+    if (room) {
+      room.addEventListener('wheel', (e) => {
+        // Skip when the wheel event is inside an open overlay
+        const target = e.target as HTMLElement;
+        if (target?.closest?.('.paper[data-open="true"]')) return;
+
+        // Only handle if the stage is wider than the viewport
+        const stage = document.getElementById('stage');
+        if (!stage || stage.scrollWidth <= room.clientWidth) return;
+
+        const amount = e.deltaX + e.deltaY;
+        room.scrollLeft += amount;
+        e.preventDefault();
+      }, { passive: false });
+    }
+  }
 </script>
 
 <style>
