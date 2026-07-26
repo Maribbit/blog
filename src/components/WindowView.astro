@@ -68,6 +68,9 @@
     <!-- Clouds container -->
     <g id="cloud-layer"></g>
 
+    <!-- Islands + Lighthouse container -->
+    <g id="island-layer"></g>
+
     <!-- Ocean layers container -->
     <g id="sea-layers"></g>
   </svg>
@@ -92,6 +95,7 @@
   import { getStageGeom, vpYtoWindowViewY } from '../utils/perspective';
   import { buildOcean } from '../utils/sea';
   import { buildClouds } from '../utils/clouds';
+  import { buildIslands } from '../utils/islands';
 
   const VIEW_W = 1698;
   const VIEW_H = 835;
@@ -114,6 +118,12 @@
   const { update: cloudUpdate } = cloudContainer
     ? buildClouds(cloudContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H })
     : { update: () => {} };
+
+  /* ─── Build islands ─── */
+  const islandContainer = document.getElementById('island-layer') as unknown as SVGGElement;
+  if (islandContainer) {
+    buildIslands(islandContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY });
+  }
 
   /* ─── Shared animation loop ─── */
   let time = 0;
