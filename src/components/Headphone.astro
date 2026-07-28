@@ -1,0 +1,28 @@
+---
+// Headphone on the desk, to the left of the notebook.
+import hpSvg from '../assets/svg/props/Headphone.svg?raw';
+import SvgAsset from './SvgAsset.astro';
+---
+
+<div class="headphone" aria-hidden="true">
+  <SvgAsset content={hpSvg} />
+</div>
+
+<style>
+  .headphone {
+    position: absolute;
+    left: 43%;
+    top: 22%;
+    width: calc(20 * var(--cm));
+    height: calc(20 * var(--cm) * 689 / 418);
+    transform: translate(-50%, -50%) rotate(-30deg);
+    z-index: 26;
+    pointer-events: none;
+  }
+
+  .headphone :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
