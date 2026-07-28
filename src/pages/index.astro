@@ -162,7 +162,7 @@ import Desk from '../components/Desk.astro';
     element depends on viewport width directly.
 
     - char-h scales with viewport HEIGHT so the window always fits with
-      a small top margin, capped at 560px on tall screens.
+      a small top margin. No cap — scene always fills vertically.
     - Stage width: max(100%, win-w × 1.8). The desk is 1.4 × win-w and
       is the widest object on stage. The extension platform adds ~7%
       perspective overhang each side, so 1.8× gives ~20% breathing room
@@ -186,14 +186,11 @@ import Desk from '../components/Desk.astro';
   */
   .room {
     --win-top-margin: 24px;
-    --char-h: min(
-      560px,
-      calc((100dvh - var(--win-top-margin)) / 1.3341)
-    );
+    --char-h: calc((100dvh - var(--win-top-margin)) / 1.3341);
     --char-w: calc(var(--char-h) * 453 / 1380);
     --char-wrist-from-bottom: 0.4975;
 
-    --win-scale: min(calc(var(--char-h) * 1.55), 1280px);
+    --win-scale: calc(var(--char-h) * 1.55);
     --win-w: var(--win-scale);
     --win-h: calc(var(--win-scale) * 964 / 1786);
 
