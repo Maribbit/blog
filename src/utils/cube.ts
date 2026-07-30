@@ -204,3 +204,99 @@ export function calcScaleBack(
   const dBack  = yBack - vpY;
   return dBack / dFront;
 }
+
+/* ──────── Wireframe (all 8 corners + edges) ──────── */
+
+/**
+ * The 8 projected corners of a perspective box in viewBox coords.
+ *
+ * ```
+ *          bl_top ─── br_top    ← back face (closer to VP)
+ *         /        / |
+ *   fl_top ───── fr_top |        ← front face
+ *        |  bl_bot | br_bot
+ *   fl_bot ───── fr_bot
+ * ```
+ */
+export interface BoxCorners {
+  fl_top:  { x: number; y: number };
+  fr_top:  { x: number; y: number };
+  fl_bot:  { x: number; y: number };
+  fr_bot:  { x: number; y: number };
+  bl_top:  { x: number; y: number };
+  br_top:  { x: number; y: number };
+  bl_bot:  { x: number; y: number };
+  br_bot:  { x: number; y: number };
+}
+
+export interface WireframeEdge {
+  from: { x: number; y: number };
+  to:   { x: number; y: number };
+  /** true if this edge would be hidden behind solid faces */
+  hidden: boolean;
+}
+
+export interface BoxWireframe {
+  corners: BoxCorners;
+  edges: WireframeEdge[];
+}
+
+/**
+ * Project all 8 corners of a box under 1-point perspective.
+ *
+ * The front face uses scale=1, the back face uses `scaleBack` in
+ * both X and Y.
+ */
+export function projectCorners(box: BoxDef, ctx: ProjectionCtx): BoxCorners {
+  const { cx, hw, topY, botY } = box;
+  const { vpX, vpY, scaleBack } = ctx;
+
+  const px = (x: number, s: number): number => vpX + (x - vpX) * s;
+  const py = (y: number, s: number): number => vpY + (y - vpY) * s;
+
+  return {
+    fl_top: { x: px(cx - hw, 1),          y: topY },
+    fr_top: { x: px(cx + hw, 1),          y: topY },
+    fl_bot: { x: px(cx - hw, 1),          y: botY },
+    fr_bot: { x: px(cx + hw, 1),          y: botY },
+    bl_top: { x: px(cx - hw, scaleBack),   y: py(topY, scaleBack) },
+    br_top: { x: px(cx + hw, scaleBack),   y: py(topY, scaleBack) },
+    bl_bot: { x: px(cx - hw, scaleBack),   y: py(botY, scaleBack) },
+    br_bot: { x: px(cx + hw, scaleBack),   y: py(botY, scaleBack) },
+  };
+}
+
+/**
+ * Compute all 12 edges of a perspective box, classified visible/hidden.
+ *
+ * In 1-point perspective with VP to the right (typical desk position),
+ * the 3 hidden edges are:
+ *   back-left vertical, left-bottom depth, back-bottom horizontal
+ * forming an L-shape at the back-left-bottom corner.
+ */
+export function projectWireframe(box: BoxDef, ctx: ProjectionCtx): BoxWireframe {
+  const c = projectCorners(box, ctx);
+
+  /* All 12 edges. "hidden" marks edges occluded by solid faces. */
+  const edges: WireframeEdge[] = [
+    // Front face (all visible)
+    { from: c.fl_top, to: c.fr_top, hidden: false },
+    { from: c.fr_top, to: c.fr_bot, hidden: false },
+    { from: c.fr_bot, to: c.fl_bot, hidden: false },
+    { from: c.fl_bot, to: c.fl_top, hidden: false },
+    // Back face top (visible), bottom (hidden)
+    { from: c.bl_top, to: c.br_top, hidden: false },
+    { from: c.br_top, to: c.br_bot, hidden: false },
+    { from: c.br_bot, to: c.bl_bot, hidden: true  },  // back-bottom horizontal
+    { from: c.bl_bot, to: c.bl_top, hidden: true  },  // back-left vertical
+    // Depth edges
+    { from: c.fl_top, to: c.bl_top, hidden: false },
+    { from: c.fr_top, to: c.br_top, hidden: false },
+    { from: c.fr_bot, to: c.br_bot, hidden: false },
+    { from: c.fl_bot, to: c.bl_bot, hidden: true  },  // left-bottom depth
+  ];
+
+  return { corners: c, edges };
+}
+
+

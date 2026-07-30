@@ -19,7 +19,7 @@
     top: 21%;
     width: calc(20 * var(--cm));
     height: calc(20 * var(--cm) * 689 / 418);
-    transform: translateX(-50%);
+    transform: translateX(-85%);
     z-index: 25;
     pointer-events: none;
   }
@@ -33,7 +33,7 @@
 
 <script>
   import { getStageGeom } from '../utils/perspective';
-  import { projectBox, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
+  import { projectBox, projectWireframe, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
 
   function buildPedestal() {
     const pedEl = document.getElementById('pedestal');
@@ -50,47 +50,76 @@
     const deskRect = desk.getBoundingClientRect();
     const deskCenterX = deskRect.left + deskRect.width / 2;
 
-    /* ─── Build projection context ───
-       BoxDef defines the front face; depth is from scaleBack.
-       Current: 压扁一半 (height 35→17), 拉长 (backY 8→2)   */
-    const CUBE = { cx: 50, hw: 46, topY: 35, botY: 52 };
+    /* ─── Build projection context ─── */
+    const CUBE = { cx: 46, hw: 35, topY: 32, botY: 45 };
     const BACK_VB_Y = 2;
-    const vpX = calcVpXLocal(pedRect, deskCenterX);
-    const vpY = calcVpYLocal(pedRect, g.vpY);
-    const scaleBack = calcScaleBack(g.vpY, pedRect.top, pedRect.height, CUBE.topY, BACK_VB_Y);
-
-    console.log('=== CUBE PERSPECTIVE (Y-fixed) ===');
-    console.log('Desk center X:', Math.round(deskCenterX));
-    console.log('Pedestal rect:', Math.round(pedRect.left), '-', Math.round(pedRect.right));
-    console.log('VP in pedestal viewBox:', vpX.toFixed(1), vpY.toFixed(1));
-    console.log('scaleBack:', scaleBack.toFixed(4));
+    const ctx = {
+      vpX: calcVpXLocal(pedRect, deskCenterX),
+      vpY: calcVpYLocal(pedRect, g.vpY),
+      scaleBack: calcScaleBack(g.vpY, pedRect.top, pedRect.height, CUBE.topY, BACK_VB_Y),
+    };
 
     /* ─── Project ─── */
-    const faces = projectBox(CUBE, { vpX, vpY, scaleBack });
+    const faces = projectBox(CUBE, ctx);
+    const wf    = projectWireframe(CUBE, ctx);
 
+    console.log('=== CUBE WIREFRAME ===');
+    console.log('VP:', ctx.vpX.toFixed(1), ctx.vpY.toFixed(1));
+    console.log('scaleBack:', ctx.scaleBack.toFixed(4));
     console.log('Top:',   faces.top);
     console.log('Front:', faces.front);
     console.log('Right:', faces.right);
 
-    /* ─── Render SVG paths ─── */
+    /* ─── Render ─── */
     const svgNS = 'http://www.w3.org/2000/svg';
-    const spec: { id: string; fill: string; d: string }[] = [
-      { id: 'pf-right', fill: '#96a2a3', d: faces.right },
-      { id: 'pf-front', fill: '#a8b5b6', d: faces.front },
-      { id: 'pf-top',   fill: '#d2d9da', d: faces.top },
+    const colors = { top: '#d2d9da', front: '#a8b5b6', right: '#96a2a3', stroke: '#4a5259' };
+
+    /* Solid faces (back-to-front: right → front → top) */
+    const faceSpec: { id: string; fill: string; d: string }[] = [
+      { id: 'pf-right', fill: colors.right, d: faces.right },
+      { id: 'pf-front', fill: colors.front, d: faces.front },
+      { id: 'pf-top',   fill: colors.top,   d: faces.top },
     ];
 
-    for (const f of spec) {
+    for (const f of faceSpec) {
       let el = svg.querySelector<SVGPathElement>('#' + f.id);
       if (!el) {
         el = document.createElementNS(svgNS, 'path');
         el.id = f.id;
-        el.setAttribute('stroke', '#4a5259');
-        el.setAttribute('stroke-width', '0.5');
         svg.appendChild(el);
       }
       el.setAttribute('d', f.d);
       el.setAttribute('fill', f.fill);
+    }
+
+    /* Wireframe edges (on top of faces) */
+    const edgeGroupId = 'pf-edges';
+    let edgeG = svg.querySelector<SVGGElement>('#' + edgeGroupId);
+    if (!edgeG) {
+      edgeG = document.createElementNS(svgNS, 'g');
+      edgeG.id = edgeGroupId;
+      svg.appendChild(edgeG);
+    }
+    /* Clear previous edges */
+    while (edgeG.firstChild) edgeG.removeChild(edgeG.firstChild);
+
+    for (const e of wf.edges) {
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', String(e.from.x));
+      line.setAttribute('y1', String(e.from.y));
+      line.setAttribute('x2', String(e.to.x));
+      line.setAttribute('y2', String(e.to.y));
+      if (e.hidden) {
+        line.setAttribute('stroke', '#888');
+        line.setAttribute('stroke-width', '0.8');
+        line.setAttribute('stroke-dasharray', '2,2');
+        line.setAttribute('opacity', '0.5');
+      } else {
+        line.setAttribute('stroke', colors.stroke);
+        line.setAttribute('stroke-width', '0.5');
+        line.setAttribute('opacity', '0.6');
+      }
+      edgeG.appendChild(line);
     }
   }
 
