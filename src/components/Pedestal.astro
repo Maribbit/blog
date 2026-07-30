@@ -1,0 +1,102 @@
+---
+// Pedestal — simplified to just the top face for perspective debugging.
+---
+
+<div class="pedestal" id="pedestal" aria-hidden="true">
+  <svg
+    class="pedestal__svg"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    overflow="visible"
+    xmlns="http://www.w3.org/2000/svg"
+  ></svg>
+</div>
+
+<style>
+  .pedestal {
+    position: absolute;
+    left: 43%;
+    top: 21%;
+    width: calc(20 * var(--cm));
+    height: calc(20 * var(--cm) * 689 / 418);
+    transform: translateX(-50%);
+    z-index: 25;
+    pointer-events: none;
+  }
+
+  .pedestal__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
+
+<script>
+  import { getStageGeom } from '../utils/perspective';
+  import { projectBox, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
+
+  function buildPedestal() {
+    const pedEl = document.getElementById('pedestal');
+    if (!pedEl) return;
+    const svg = pedEl.querySelector('.pedestal__svg') as unknown as SVGSVGElement;
+    if (!svg) return;
+
+    /* ─── Read room geometry ─── */
+    const g = getStageGeom();
+    const desk = document.querySelector<HTMLElement>('.desk');
+    if (!desk) return;
+
+    const pedRect = pedEl.getBoundingClientRect();
+    const deskRect = desk.getBoundingClientRect();
+    const deskCenterX = deskRect.left + deskRect.width / 2;
+
+    /* ─── Build projection context ───
+       BoxDef defines the front face; depth is from scaleBack.
+       Current: 压扁一半 (height 35→17), 拉长 (backY 8→2)   */
+    const CUBE = { cx: 50, hw: 46, topY: 35, botY: 52 };
+    const BACK_VB_Y = 2;
+    const vpX = calcVpXLocal(pedRect, deskCenterX);
+    const vpY = calcVpYLocal(pedRect, g.vpY);
+    const scaleBack = calcScaleBack(g.vpY, pedRect.top, pedRect.height, CUBE.topY, BACK_VB_Y);
+
+    console.log('=== CUBE PERSPECTIVE (Y-fixed) ===');
+    console.log('Desk center X:', Math.round(deskCenterX));
+    console.log('Pedestal rect:', Math.round(pedRect.left), '-', Math.round(pedRect.right));
+    console.log('VP in pedestal viewBox:', vpX.toFixed(1), vpY.toFixed(1));
+    console.log('scaleBack:', scaleBack.toFixed(4));
+
+    /* ─── Project ─── */
+    const faces = projectBox(CUBE, { vpX, vpY, scaleBack });
+
+    console.log('Top:',   faces.top);
+    console.log('Front:', faces.front);
+    console.log('Right:', faces.right);
+
+    /* ─── Render SVG paths ─── */
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const spec: { id: string; fill: string; d: string }[] = [
+      { id: 'pf-right', fill: '#96a2a3', d: faces.right },
+      { id: 'pf-front', fill: '#a8b5b6', d: faces.front },
+      { id: 'pf-top',   fill: '#d2d9da', d: faces.top },
+    ];
+
+    for (const f of spec) {
+      let el = svg.querySelector<SVGPathElement>('#' + f.id);
+      if (!el) {
+        el = document.createElementNS(svgNS, 'path');
+        el.id = f.id;
+        el.setAttribute('stroke', '#4a5259');
+        el.setAttribute('stroke-width', '0.5');
+        svg.appendChild(el);
+      }
+      el.setAttribute('d', f.d);
+      el.setAttribute('fill', f.fill);
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    buildPedestal();
+  } else {
+    window.addEventListener('load', buildPedestal);
+  }
+</script>
