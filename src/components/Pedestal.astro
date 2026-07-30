@@ -34,7 +34,7 @@
 
 <script>
   import { getStageGeom } from '../utils/perspective';
-  import { projectCorners, projectWireframe, roundedPath, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
+  import { projectCorners, roundedPath, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
 
   function buildPedestal() {
     const pedEl = document.getElementById('pedestal');
@@ -62,7 +62,6 @@
 
     /* ─── Project ─── */
     const c = projectCorners(CUBE, ctx);
-    const wf = projectWireframe(CUBE, ctx);
 
     /* ─── Radii ───
          RF/RB  = top & bottom face corner radius (large → visible pillow)
@@ -138,35 +137,6 @@
     path(quad(fw.tl, fw.tr, fw.br, fw.bl), S, 'pf-front');
     // 5. Top face — dark gray, covers all
     path(roundedPath([ft.fl, ft.fr, ft.br, ft.bl], [RF, RF, RB, RB]), '#555', 'pf-top');
-
-    /* Wireframe edges (guide overlay) */
-    const edgeGroupId = 'pf-edges';
-    let edgeG = svg.querySelector<SVGGElement>('#' + edgeGroupId);
-    if (!edgeG) {
-      edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      edgeG.id = edgeGroupId;
-      svg.appendChild(edgeG);
-    }
-    while (edgeG.firstChild) edgeG.removeChild(edgeG.firstChild);
-
-    for (const e of wf.edges) {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', String(e.from.x));
-      line.setAttribute('y1', String(e.from.y));
-      line.setAttribute('x2', String(e.to.x));
-      line.setAttribute('y2', String(e.to.y));
-      if (e.hidden) {
-        line.setAttribute('stroke', '#888');
-        line.setAttribute('stroke-width', '0.8');
-        line.setAttribute('stroke-dasharray', '2,2');
-        line.setAttribute('opacity', '0.5');
-      } else {
-        line.setAttribute('stroke', '#4a5259');
-        line.setAttribute('stroke-width', '0.5');
-        line.setAttribute('opacity', '0.6');
-      }
-      edgeG.appendChild(line);
-    }
   }
 
   if (document.readyState === 'complete') {
