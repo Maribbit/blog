@@ -1,6 +1,16 @@
 ---
-// Pedestal — top face (dark gray rounded rectangle) + wireframe reference.
-// Add your custom shape inside the rounded top face.
+// Pedestal — example of the 外接立方体 → 内接图形 workflow.
+//
+// ## Methodology for ALL new desk objects:
+//
+//   1. Set CUBE parameters within SVG viewBox (0-100).
+//   2. Compute ctx: calcVpXLocal / calcVpYLocal / calcScaleBack.
+//   3. Call projectCorners(CUBE, ctx) → 8 perspective points.
+//   4. Draw your shape inside those bounding corners.
+//
+// The 8 projected corners (c.fl_top .. c.br_bot) define the bounding
+// box. Your inscribed shape must stay inside these for perspective
+// correctness.
 ---
 
 <div class="pedestal" id="pedestal" aria-hidden="true">
@@ -51,7 +61,11 @@
     const deskRect = desk.getBoundingClientRect();
     const deskCenterX = deskRect.left + deskRect.width / 2;
 
-    /* ─── Build projection context ─── */
+    /* ─── Build projection context ───
+         CUBE defines the front face (center, half-width, top, bottom).
+         ctx is derived from actual DOM layout — the caller must provide
+         the desk center X (for VP X) and the room vanishing point Y.
+         BACK_VB_Y sets how deep the box goes (smaller = deeper).       */
     const CUBE = { cx: 46, hw: 35, topY: 32, botY: 45 };
     const BACK_VB_Y = 2;
     const ctx = {
@@ -126,7 +140,10 @@
       bf: inset(fb.bl, fb.fl, WB),
     };
 
-    /* ─── Build faces, z-order back→front ─── */
+    /* ─── Draw inscribed body (replace this block with your shape) ───
+         Using the 8 projected corners, draw your shape inside. Below is
+         a pill-shaped example: rounded top/bottom + flat side walls.
+         Order: bottom → left → right → front → top.                   */
     // 1. Bottom face — rounded rectangle
     path(roundedPath([fb.fl, fb.fr, fb.br, fb.bl], [RF, RF, RB, RB]), S, 'pf-bot');
     // 2. Left side

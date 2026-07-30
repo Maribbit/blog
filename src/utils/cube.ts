@@ -1,40 +1,32 @@
 /**
  * cube — 1-point perspective box projection utility.
  *
- * ## Why
- * Every 3D object placed on the desk should first be enclosed in a
- * perspective-correct bounding box (an "外接立方体"), then the object's
- * details are drawn inside that box. This ensures all objects share the
- * same vanishing point and feel grounded in the 2.5D room.
+ * ## Workflow: 外接立方体 → 内接图形
  *
- * ## Usage
+ * 1. Place a `<div>` at the target position and size, with viewBox="0 0 100 100".
+ * 2. Call `projectCorners(boxDef, ctx)` to get the 8 perspective-correct corners.
+ * 3. Use `roundedPath()` or raw SVG commands to draw your shape inside those corners.
+ * 4. For wireframe debugging (pre-step), call `projectWireframe()` to render 12 edges.
  *
- * ```ts
- * import { projectBox, calcScaleBack, calcVpXLocal, calcVpYLocal }
- *   from '../utils/cube';
- * import { getStageGeom } from '../utils/perspective';
- *
- * const g = getStageGeom();
- * const pedRect = pedEl.getBoundingClientRect();
- * const desk    = document.querySelector('.desk')!;
- * const deskRect = desk.getBoundingClientRect();
- * const deskCenterX = deskRect.left + deskRect.width / 2;
- *
- * const vpX = calcVpXLocal(pedRect, deskCenterX);
- * const vpY = calcVpYLocal(pedRect, g.vpY);
- * const sb  = calcScaleBack(g.vpY, pedRect.top, pedRect.height, 35, 8);
- *
- * const { top, front, right } = projectBox(
- *   { cx: 50, hw: 44, topY: 35, botY: 70 },
- *   { vpX, vpY, scaleBack: sb },
- * );
+ * ```
+ *              ┌──────────────────────┐
+ *              │  1. Define the box   │
+ *              │  BoxDef + ProjectionCtx  │
+ *              └──────┬───────────────┘
+ *                      ▼
+ *              ┌──────────────────────┐
+ *              │  2. Project corners  │
+ *              │  projectCorners() →  │
+ *              │  8 points in viewBox │
+ *              └──────┬───────────────┘
+ *                      ▼
+ *              ┌──────────────────────────────────┐
+ *              │  3. Draw inscribed shape inside   │
+ *              │  Use roundedPath() or raw SVG     │
+ *              └──────────────────────────────────┘
  * ```
  *
  * ## Perspective Model
- *
- * A box has a **front face** (closest to viewer) and a **back face**
- * (further). The back face is uniformly scaled toward the VP in both
- * X and Y:
  *
  * ```
  *           VP ●
@@ -46,17 +38,27 @@
  *       fl───-──fr    ← front face (larger, further from VP)
  * ```
  *
- * The 3 visible faces are: **top** (fl→fr→br→bl), **front** (fl→fr
- * vertical drop), and **right** (fr→br vertical drop). All depth
- * edges converge toward the VP in both X and Y.
+ * All depth edges converge toward the VP in both X and Y.
  *
  * ## BoxDef vs ProjectionCtx
  *
- * - `BoxDef` describes the box's front face in the local viewBox (0-100).
- * - `ProjectionCtx` provides the VP position (viewBox coords) and the
- *   scale factor. The back face geometry is **derived** from these two.
- * - The caller is responsible for computing `vpX`, `vpY`, and `scaleBack`
- *   from the actual DOM layout. This keeps the projection logic pure.
+ * - `BoxDef` describes the box's **front face** in local viewBox (0-100).
+ * - `ProjectionCtx` provides the VP position and depth scale.
+ *   Back face is **derived** — caller computes ctx from DOM layout.
+ *
+ * ## Types at a glance
+ *
+ * | Type / fn | What |
+ * |---|---|
+ * | `BoxDef` | `{ cx, hw, topY, botY }` — front face definition |
+ * | `ProjectionCtx` | `{ vpX, vpY, scaleBack }` — vanishing point + depth |
+ * | `BoxCorners` | 8 perspective-correct corner points |
+ * | `BoxWireframe` | `{ corners, edges[] }` — 12 edges with hidden flags |
+ * | `projectBox()` | Returns `{ top, front, right }` SVG path d-strings |
+ * | `projectCorners()` | Returns all 8 projected corner points |
+ * | `projectWireframe()` | Returns 12 edges with visibility classification |
+ * | `roundedPath()` | Generic cubic-bezier rounded polygon |
+ * | `calcVpXLocal / VpYLocal / ScaleBack` | Compute VP context from DOM |
  */
 
 /* ──────── Types ──────── */
@@ -368,50 +370,6 @@ export function roundedPath(
   return segs.join(' ');
 }
 
-/**
- * Generate all 3 visible faces of a box with rounded top edges.
- *
- * This is like `projectBox` but the top-front corners of the front and
- * right faces are rounded to match the inscribed rounded top face.
- *
- * @param box     - Box definition.
- * @param ctx     - Projection context.
- * @param rFront  - Corner radius at the front edge (viewBox units).
- * @returns       { top, front, right } SVG path `d` strings.
- */
-export function projectRoundedTopBox(
-  box: BoxDef,
-  ctx: ProjectionCtx,
-  rFront: number,
-): BoxFaces {
-  const { cx, hw, topY, botY } = box;
-  const { vpX, vpY, scaleBack } = ctx;
 
-  const px = (x: number, s: number): number => vpX + (x - vpX) * s;
-  const py = (y: number, s: number): number => vpY + (y - vpY) * s;
-
-  const fl = px(cx - hw, 1);
-  const fr = px(cx + hw, 1);
-  const bl = px(cx - hw, scaleBack);
-  const br = px(cx + hw, scaleBack);
-  const bTop = py(topY, scaleBack);
-  const bBot = py(botY, scaleBack);
-  const rBack = rFront * scaleBack;
-
-  return {
-    top: roundedPath(
-      [{ x: fl, y: topY }, { x: fr, y: topY }, { x: br, y: bTop }, { x: bl, y: bTop }],
-      [rFront, rFront, rBack, rBack],
-    ),
-    front: roundedPath(
-      [{ x: fl, y: topY }, { x: fr, y: topY }, { x: fr, y: botY }, { x: fl, y: botY }],
-      [rFront, rFront, 0, 0],
-    ),
-    right: roundedPath(
-      [{ x: fr, y: topY }, { x: br, y: bTop }, { x: br, y: bBot }, { x: fr, y: botY }],
-      [rFront, rBack, 0, 0],
-    ),
-  };
-}
 
 
