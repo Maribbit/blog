@@ -299,4 +299,119 @@ export function projectWireframe(box: BoxDef, ctx: ProjectionCtx): BoxWireframe 
   return { corners: c, edges };
 }
 
+/* ──────── Rounded shapes (cubic-bezier corners) ──────── */
+
+const KAPPA = 0.5523; /* 4×(√2−1)/3 — cubic bezier quarter-circle approx */
+
+/**
+ * Generate an SVG path for any polygon with per-corner rounded corners,
+ * using cubic Bezier curves (C command).
+ *
+ * Unlike arc (A) commands, bezier curves don't require equal rx/ry and
+ * won't distort when the viewBox is stretched non-uniformly.
+ *
+ * @param points - Clockwise corner points `{x, y}`.
+ * @param radii  - Per-corner radius (same length as points; 0 = sharp).
+ * @returns      SVG path `d` string.
+ */
+export function roundedPath(
+  points: { x: number; y: number }[],
+  radii: number[],
+): string {
+  const n = points.length;
+  if (n < 2) return '';
+  const segs: string[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const p = points[i];
+    const prev = points[(i - 1 + n) % n];
+    const next = points[(i + 1) % n];
+    let r = Math.max(0, radii[i]);
+
+    const dxIn = p.x - prev.x;
+    const dyIn = p.y - prev.y;
+    const lenIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+
+    const dxOut = next.x - p.x;
+    const dyOut = next.y - p.y;
+    const lenOut = Math.sqrt(dxOut * dxOut + dyOut * dyOut);
+
+    r = Math.min(r, lenIn / 2, lenOut / 2);
+
+    if (r < 0.001) {
+      segs.push(`${i === 0 ? 'M' : 'L'} ${p.x.toFixed(4)} ${p.y.toFixed(4)}`);
+      continue;
+    }
+
+    const nxIn = dxIn / lenIn;
+    const nyIn = dyIn / lenIn;
+    const nxOut = dxOut / lenOut;
+    const nyOut = dyOut / lenOut;
+
+    /* Arc start (inset on incoming edge) and end (inset on outgoing edge) */
+    const ax = p.x - r * nxIn;
+    const ay = p.y - r * nyIn;
+    const bx = p.x + r * nxOut;
+    const by = p.y + r * nyOut;
+
+    /* Cubic bezier control points tangent to each edge */
+    const c1x = ax + r * KAPPA * nxIn;
+    const c1y = ay + r * KAPPA * nyIn;
+    const c2x = bx - r * KAPPA * nxOut;
+    const c2y = by - r * KAPPA * nyOut;
+
+    segs.push(`${i === 0 ? 'M' : 'L'} ${ax.toFixed(4)} ${ay.toFixed(4)}`);
+    segs.push(`C ${c1x.toFixed(4)} ${c1y.toFixed(4)} ${c2x.toFixed(4)} ${c2y.toFixed(4)} ${bx.toFixed(4)} ${by.toFixed(4)}`);
+  }
+
+  segs.push('Z');
+  return segs.join(' ');
+}
+
+/**
+ * Generate all 3 visible faces of a box with rounded top edges.
+ *
+ * This is like `projectBox` but the top-front corners of the front and
+ * right faces are rounded to match the inscribed rounded top face.
+ *
+ * @param box     - Box definition.
+ * @param ctx     - Projection context.
+ * @param rFront  - Corner radius at the front edge (viewBox units).
+ * @returns       { top, front, right } SVG path `d` strings.
+ */
+export function projectRoundedTopBox(
+  box: BoxDef,
+  ctx: ProjectionCtx,
+  rFront: number,
+): BoxFaces {
+  const { cx, hw, topY, botY } = box;
+  const { vpX, vpY, scaleBack } = ctx;
+
+  const px = (x: number, s: number): number => vpX + (x - vpX) * s;
+  const py = (y: number, s: number): number => vpY + (y - vpY) * s;
+
+  const fl = px(cx - hw, 1);
+  const fr = px(cx + hw, 1);
+  const bl = px(cx - hw, scaleBack);
+  const br = px(cx + hw, scaleBack);
+  const bTop = py(topY, scaleBack);
+  const bBot = py(botY, scaleBack);
+  const rBack = rFront * scaleBack;
+
+  return {
+    top: roundedPath(
+      [{ x: fl, y: topY }, { x: fr, y: topY }, { x: br, y: bTop }, { x: bl, y: bTop }],
+      [rFront, rFront, rBack, rBack],
+    ),
+    front: roundedPath(
+      [{ x: fl, y: topY }, { x: fr, y: topY }, { x: fr, y: botY }, { x: fl, y: botY }],
+      [rFront, rFront, 0, 0],
+    ),
+    right: roundedPath(
+      [{ x: fr, y: topY }, { x: br, y: bTop }, { x: br, y: bBot }, { x: fr, y: botY }],
+      [rFront, rBack, 0, 0],
+    ),
+  };
+}
+
 

@@ -1,5 +1,6 @@
 ---
-// Pedestal — simplified to just the top face for perspective debugging.
+// Pedestal — top face (dark gray rounded rectangle) + wireframe reference.
+// Add your custom shape inside the rounded top face.
 ---
 
 <div class="pedestal" id="pedestal" aria-hidden="true">
@@ -33,7 +34,7 @@
 
 <script>
   import { getStageGeom } from '../utils/perspective';
-  import { projectBox, projectWireframe, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
+  import { projectCorners, projectWireframe, roundedPath, calcScaleBack, calcVpXLocal, calcVpYLocal } from '../utils/cube';
 
   function buildPedestal() {
     const pedEl = document.getElementById('pedestal');
@@ -60,51 +61,96 @@
     };
 
     /* ─── Project ─── */
-    const faces = projectBox(CUBE, ctx);
-    const wf    = projectWireframe(CUBE, ctx);
+    const c = projectCorners(CUBE, ctx);
+    const wf = projectWireframe(CUBE, ctx);
 
-    console.log('=== CUBE WIREFRAME ===');
-    console.log('VP:', ctx.vpX.toFixed(1), ctx.vpY.toFixed(1));
-    console.log('scaleBack:', ctx.scaleBack.toFixed(4));
-    console.log('Top:',   faces.top);
-    console.log('Front:', faces.front);
-    console.log('Right:', faces.right);
+    /* ─── Radii ───
+         RF/RB  = top & bottom face corner radius (large → visible pillow)
+         WF/WB  = wall connection inset (small → walls hide bottom arc)   */
+    const RF = 6;
+    const RB = RF * ctx.scaleBack;
+    const WF = 4;                          // wall front inset
+    const WB = WF * ctx.scaleBack;         // wall back inset
+    const S  = '#b0b0b0';
 
-    /* ─── Render ─── */
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const colors = { top: '#d2d9da', front: '#a8b5b6', right: '#96a2a3', stroke: '#4a5259' };
-
-    /* Solid faces (back-to-front: right → front → top) */
-    const faceSpec: { id: string; fill: string; d: string }[] = [
-      { id: 'pf-right', fill: colors.right, d: faces.right },
-      { id: 'pf-front', fill: colors.front, d: faces.front },
-      { id: 'pf-top',   fill: colors.top,   d: faces.top },
-    ];
-
-    for (const f of faceSpec) {
-      let el = svg.querySelector<SVGPathElement>('#' + f.id);
+    /* ─── Helpers ─── */
+    function path(d: string, fill: string, id: string) {
+      let el = svg.querySelector<SVGPathElement>('#' + id);
       if (!el) {
-        el = document.createElementNS(svgNS, 'path');
-        el.id = f.id;
+        el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.id = id;
         svg.appendChild(el);
       }
-      el.setAttribute('d', f.d);
-      el.setAttribute('fill', f.fill);
+      el.setAttribute('d', d);
+      el.setAttribute('fill', fill);
+    }
+    function quad(p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}, p4: {x:number,y:number}) {
+      return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`;
+    }
+    /* inset a point from p0 along edge p0→p1 by distance r */
+    function inset(p0: {x:number,y:number}, p1: {x:number,y:number}, r: number) {
+      const dx = p1.x - p0.x, dy = p1.y - p0.y;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      return { x: p0.x + (r/len)*dx, y: p0.y + (r/len)*dy };
     }
 
-    /* Wireframe edges (on top of faces) */
+    /* ─── Compute side-wall corners ───
+         Walls connect NEAR the cube corners (inset WF/WB) rather than at
+         the arc endpoints (RF/RB). The top/bottom faces (large RF arcs)
+         then overhang the walls, creating the pill shape.                */
+    const ft = {
+      fl: c.fl_top, fr: c.fr_top, bl: c.bl_top, br: c.br_top };
+    const fb = {
+      fl: c.fl_bot, fr: c.fr_bot, bl: c.bl_bot, br: c.br_bot };
+
+    /* Front wall — inset by WF from cube corners (edges vertical) */
+    const fw = {
+      tl: inset(ft.fl, ft.fr, WF),
+      tr: inset(ft.fr, ft.fl, WF),
+      br: inset(fb.fr, fb.fl, WF),
+      bl: inset(fb.fl, fb.fr, WF),
+    };
+
+    /* Right wall — inset by WF/WB along depth edges */
+    const rw = {
+      tf: inset(ft.fr, ft.br, WF),
+      tb: inset(ft.br, ft.fr, WB),
+      bb: inset(fb.br, fb.fr, WB),
+      bf: inset(fb.fr, fb.br, WF),
+    };
+
+    /* Left wall — inset by WF/WB along depth edges */
+    const lw = {
+      tf: inset(ft.bl, ft.fl, WB),
+      tb: inset(ft.fl, ft.bl, WF),
+      bb: inset(fb.fl, fb.bl, WF),
+      bf: inset(fb.bl, fb.fl, WB),
+    };
+
+    /* ─── Build faces, z-order back→front ─── */
+    // 1. Bottom face — rounded rectangle
+    path(roundedPath([fb.fl, fb.fr, fb.br, fb.bl], [RF, RF, RB, RB]), S, 'pf-bot');
+    // 2. Left side
+    path(quad(lw.tf, lw.tb, lw.bb, lw.bf), S, 'pf-left');
+    // 3. Right side
+    path(quad(rw.tf, rw.tb, rw.bb, rw.bf), S, 'pf-right');
+    // 4. Front side — left & right edges VERTICAL (same X)
+    path(quad(fw.tl, fw.tr, fw.br, fw.bl), S, 'pf-front');
+    // 5. Top face — dark gray, covers all
+    path(roundedPath([ft.fl, ft.fr, ft.br, ft.bl], [RF, RF, RB, RB]), '#555', 'pf-top');
+
+    /* Wireframe edges (guide overlay) */
     const edgeGroupId = 'pf-edges';
     let edgeG = svg.querySelector<SVGGElement>('#' + edgeGroupId);
     if (!edgeG) {
-      edgeG = document.createElementNS(svgNS, 'g');
+      edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       edgeG.id = edgeGroupId;
       svg.appendChild(edgeG);
     }
-    /* Clear previous edges */
     while (edgeG.firstChild) edgeG.removeChild(edgeG.firstChild);
 
     for (const e of wf.edges) {
-      const line = document.createElementNS(svgNS, 'line');
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', String(e.from.x));
       line.setAttribute('y1', String(e.from.y));
       line.setAttribute('x2', String(e.to.x));
@@ -115,7 +161,7 @@
         line.setAttribute('stroke-dasharray', '2,2');
         line.setAttribute('opacity', '0.5');
       } else {
-        line.setAttribute('stroke', colors.stroke);
+        line.setAttribute('stroke', '#4a5259');
         line.setAttribute('stroke-width', '0.5');
         line.setAttribute('opacity', '0.6');
       }
