@@ -113,10 +113,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   <div class="paper__scroll" id="music-scroll" tabindex="-1">
     <div class="paper__music-container">
       <div class="paper__music-header">
-        <span class="paper__label">Now Playing</span>
-        <button class="paper__music-close" type="button" data-close aria-label="关闭">
-          <span class="paper__x" aria-hidden="true"></span>
-        </button>
+        <span class="paper__music-title-label">海兔的歌单<br />Maribbit's Playlist</span>
       </div>
 
       <!-- Track list on top: read it first, then play below -->
@@ -153,7 +150,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
         ></iframe>
       </div>
 
-      <!-- Nav controls grouped below the embed -->
+      <!-- Nav + close grouped below the embed -->
       <div class="paper__music-controls">
         <div class="paper__music-nav paper__music-nav--prev" id="music-prev" role="button" tabindex="0" aria-label="上一首">
           <span class="paper__music-arrow paper__music-arrow--left" aria-hidden="true"></span>
@@ -161,6 +158,9 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
         <div class="paper__music-nav paper__music-nav--next" id="music-next" role="button" tabindex="0" aria-label="下一首">
           <span class="paper__music-arrow paper__music-arrow--right" aria-hidden="true"></span>
         </div>
+        <button class="paper__music-close" type="button" data-close aria-label="关闭">
+          <span class="paper__x" aria-hidden="true"></span>
+        </button>
       </div>
     </div>
   </div>
@@ -596,22 +596,32 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     gap: 1rem;
   }
 
-  /* Header */
+  /* Header — centered bilingual title */
   .paper__music-header {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    text-align: center;
   }
-  .paper__music-header .paper__label {
-    font-size: 0.72rem;
-    letter-spacing: 0.28em;
+  .paper__music-title-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    color: var(--color-text);
+  }
+  .paper__music-title-label br + * {
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
     color: var(--color-text-dim);
   }
   .paper__music-close {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: none;
     border-radius: 999px;
     background: rgba(237, 241, 242, 0.4);

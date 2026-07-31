@@ -3,22 +3,38 @@
     <filter id="sill-cast-shadow" x="-10%" y="-100%" width="120%" height="300%" filterUnits="objectBoundingBox">
       <feGaussianBlur stdDeviation="10" />
     </filter>
+
+    <!-- Side frames fade to match the top & bottom frames at the corners,
+         eliminating visible seams where the rects meet. Warm-gray tones
+         coordinate with the windowsill's warm cast (window light). -->
+    <linearGradient id="frame-side-front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#AAA7A4" />
+      <stop offset="1" stop-color="#B9B6B3" />
+    </linearGradient>
+    <linearGradient id="frame-side-inner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B2B0B1" />
+      <stop offset="1" stop-color="#F0F0F0" />
+    </linearGradient>
   </defs>
 
   <!-- ════════ FRAME INNER BEVELS ════════ -->
-  <path id="Frame_Upper_Inner" d="M 33 32 L 1753 32 L 1731 45 L 56 45 Z" fill="#B4B5B9" />
-  <path id="Frame_Right_Inner" d="M 1753 32 L 1753 888 L 1731 880 L 1731 45 Z" fill="#E3E3E3" />
-  <path id="Frame_Left_Inner" d="M 33 32 L 33 888 L 56 880 L 56 45 Z" fill="#E3E3E3" />
+  <path id="Frame_Upper_Inner" d="M 33 32 L 1753 32 L 1731 45 L 56 45 Z" fill="#B2B0B1" />
+  <path id="Frame_Right_Inner" d="M 1753 32 L 1753 888 L 1731 880 L 1731 45 Z" fill="url(#frame-side-inner)" />
+  <path id="Frame_Left_Inner" d="M 33 32 L 33 888 L 56 880 L 56 45 Z" fill="url(#frame-side-inner)" />
   <path id="Frame_Bottom_Inner" d="M 56 880 L 1731 880 L 1753 888 L 33 888 Z" fill="#F0F0F0" />
 
   <!-- ════════ FRAME FRONT FACES ════════ -->
-  <rect id="Frame_Upper_Front" x="0" y="0" width="1786" height="32" fill="#A5A5A5" />
-  <rect id="Frame_Right_Front" x="1753" y="32" width="33" height="856" fill="#A5A5A5" />
-  <rect id="Frame_Left_Front" x="0" y="32" width="33" height="856" fill="#A5A5A5" />
-  <rect id="Frame_Lower_Front" x="0" y="888" width="1786" height="30" fill="#B5B5B7" />
+  <rect id="Frame_Upper_Front" x="0" y="0" width="1786" height="32" fill="#AAA7A4" />
+  <rect id="Frame_Right_Front" x="1753" y="32" width="33" height="856" fill="url(#frame-side-front)" />
+  <rect id="Frame_Left_Front" x="0" y="32" width="33" height="856" fill="url(#frame-side-front)" />
+  <rect id="Frame_Lower_Front" x="0" y="888" width="1786" height="30" fill="#B9B6B3" />
 
   <!-- ════════ WINDOWSILL ════════ -->
   <path id="Windowsill_Upper" d="M 0 918 L 1786 918 L 1861 939 L -75 939 Z" fill="#EFEFEF" />
-  <rect id="Windowsill_Front" x="-75" y="939" width="1936" height="25" fill="#ACA8A5" />
-  <ellipse id="Sill_Cast_Shadow" cx="893" cy="970" rx="968" ry="14" fill="rgba(34, 46, 54, 0.34)" filter="url(#sill-cast-shadow)" />
+  <!-- Front face lightened so it reads closer to the frames; keeps a
+       subtle warm tone (slightly darker than the upper face) for depth. -->
+  <rect id="Windowsill_Front" x="-75" y="939" width="1936" height="25" fill="#C6C1BD" />
+  <!-- Softer cast shadow: lower opacity so it no longer over-darkens the
+       sill front bottom edge; it reads as a gentle ground contact. -->
+  <ellipse id="Sill_Cast_Shadow" cx="893" cy="974" rx="968" ry="13" fill="rgba(34, 46, 54, 0.18)" filter="url(#sill-cast-shadow)" />
 </svg>

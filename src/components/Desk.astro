@@ -90,17 +90,21 @@ import Notebook from './Notebook.astro';
        adjacent faces (~0.24px at 1200px desk width). */
     const E = 0.02;
 
+    /* Tray front x-boundary (ramp inner edge). Lower value ⇒ steeper
+       ramps + wider lower-middle tray. Was 38 → 36. */
+    const TR = 36;
+
     /* definition: { id, d, fill } */
     const faceDefs = [
       /* ─── Top faces (bottom edges pushed down by E) ─── */
       { id: 'df-upper-left', fill: C.top,
         d: `M ${50*NF} 0 L ${30+20*NF} 0 L 30 ${17+E} L 0 ${17+E} Z` },
       { id: 'df-left-ramp', fill: C.ramp,
-        d: `M ${30+20*NF} 0 L ${38+12*NMF} ${17+E} L 38 ${33+E} L 30 ${17+E} Z` },
+        d: `M ${30+20*NF} 0 L ${TR+(50-TR)*NMF} ${17+E} L ${TR} ${33+E} L 30 ${17+E} Z` },
       { id: 'df-lower-mid', fill: C.top,
-        d: `M 38 ${33+E} L 62 ${33+E} L ${62-12*NMF} ${17+E} L ${38+12*NMF} ${17+E} Z` },
+        d: `M ${TR} ${33+E} L ${100-TR} ${33+E} L ${100-TR-(50-TR)*NMF} ${17+E} L ${TR+(50-TR)*NMF} ${17+E} Z` },
       { id: 'df-right-ramp', fill: C.ramp,
-        d: `M ${62-12*NMF} ${17+E} L ${70-20*NF} 0 L 70 ${17+E} L 62 ${33+E} Z` },
+        d: `M ${100-TR-(50-TR)*NMF} ${17+E} L ${70-20*NF} 0 L 70 ${17+E} L ${100-TR} ${33+E} Z` },
       { id: 'df-upper-right', fill: C.top,
         d: `M ${70-20*NF} 0 L ${100-50*NF} 0 L 100 ${17+E} L 70 ${17+E} Z` },
 
@@ -108,11 +112,11 @@ import Notebook from './Notebook.astro';
       { id: 'df-front-left', fill: C.front,
         d: `M 0 ${17-E} L 30 ${17-E} L 30 100 L 0 100 Z` },
       { id: 'df-front-left-ramp', fill: C.front,
-        d: `M 30 ${17-E} L 38 ${33-E} L 38 100 L 30 100 Z` },
+        d: `M 30 ${17-E} L ${TR} ${33-E} L ${TR} 100 L 30 100 Z` },
       { id: 'df-front-mid', fill: C.front,
-        d: `M 38 ${33-E} L 62 ${33-E} L 62 100 L 38 100 Z` },
+        d: `M ${TR} ${33-E} L ${100-TR} ${33-E} L ${100-TR} 100 L ${TR} 100 Z` },
       { id: 'df-front-right-ramp', fill: C.front,
-        d: `M 62 ${33-E} L 70 ${17-E} L 70 100 L 62 100 Z` },
+        d: `M ${100-TR} ${33-E} L 70 ${17-E} L 70 100 L ${100-TR} 100 Z` },
       { id: 'df-front-right', fill: C.front,
         d: `M 70 ${17-E} L 100 ${17-E} L 100 100 L 70 100 Z` },
 
