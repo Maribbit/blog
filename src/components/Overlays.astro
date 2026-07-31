@@ -1,7 +1,8 @@
 ---
-// Two navigable surfaces on the shared Maribbit Paper system:
+// Three navigable surfaces on the shared Maribbit Paper system:
 //   #about   -> paper card  (clicking the character)
 //   #reading -> paper page  (clicking the notebook)
+//   #music   -> paper card  (clicking the headphone)
 //
 // Layout philosophy: content-centric, not chrome-centric.
 // Dismiss / back hang off the content box itself (left/right docks),
@@ -100,6 +101,66 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
 
           <div class="paper-prose__end" aria-hidden="true"></div>
         </article>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MUSIC: full-width overlay with track navigation. -->
+<div class="paper paper--music" id="music-view" data-open="false" aria-hidden="true">
+  <div class="paper__veil paper__veil--music" aria-hidden="true"></div>
+
+  <div class="paper__scroll" id="music-scroll" tabindex="-1">
+    <div class="paper__music-container">
+      <div class="paper__music-header">
+        <span class="paper__label">Now Playing</span>
+        <button class="paper__music-close" type="button" data-close aria-label="关闭">
+          <span class="paper__x" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <!-- Track list on top: read it first, then play below -->
+      <div class="paper__music-tracklist">
+        <button class="paper__music-track" data-track="0" type="button">
+          <span class="paper__music-num">01</span>
+          <span class="paper__music-info"><span class="paper__music-title">白猫海贼船</span><span class="paper__music-artist">Yunomi feat. 日南结里</span></span>
+          <span class="paper__music-indicator" aria-hidden="true"></span>
+        </button>
+        <button class="paper__music-track" data-track="1" type="button">
+          <span class="paper__music-num">02</span>
+          <span class="paper__music-info"><span class="paper__music-title">一天到晚游泳的鱼</span><span class="paper__music-artist">张雨生 Tom Chang</span></span>
+          <span class="paper__music-indicator" aria-hidden="true"></span>
+        </button>
+        <button class="paper__music-track" data-track="2" type="button">
+          <span class="paper__music-num">03</span>
+          <span class="paper__music-info"><span class="paper__music-title">离家出走</span><span class="paper__music-artist">卫兰 Janice Vidal</span></span>
+          <span class="paper__music-indicator" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <!-- Embed below -->
+      <div class="paper__music-embed">
+        <iframe
+          id="music-iframe"
+          allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+          frameborder="0"
+          height="150"
+          style="width:100%;max-width:500px;overflow:hidden;border-radius:10px;background:transparent;"
+          sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+          src="https://embed.music.apple.com/us/album/%E7%A6%BB%E5%AE%B6%E5%87%BA%E8%B5%B0/557096396?i=557096400"
+          loading="lazy"
+          title="Apple Music 播放器"
+        ></iframe>
+      </div>
+
+      <!-- Nav controls grouped below the embed -->
+      <div class="paper__music-controls">
+        <div class="paper__music-nav paper__music-nav--prev" id="music-prev" role="button" tabindex="0" aria-label="上一首">
+          <span class="paper__music-arrow paper__music-arrow--left" aria-hidden="true"></span>
+        </div>
+        <div class="paper__music-nav paper__music-nav--next" id="music-next" role="button" tabindex="0" aria-label="下一首">
+          <span class="paper__music-arrow paper__music-arrow--right" aria-hidden="true"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -490,6 +551,225 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     }
   }
 
+  /* ──────────── Music overlay (full-width) ──────────── */
+  .paper--music {
+    display: none;
+  }
+  .paper--music[data-open='true'] {
+    display: flex;
+    flex-direction: column;
+  }
+  .paper__veil--music {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+    background:
+      radial-gradient(
+        ellipse 70% 60% at 50% 45%,
+        rgba(237, 241, 242, 0.72) 0%,
+        rgba(237, 241, 242, 0.38) 55%,
+        rgba(237, 241, 242, 0.1) 100%
+      );
+    -webkit-backdrop-filter: blur(14px) saturate(108%);
+    backdrop-filter: blur(14px) saturate(108%);
+    animation: paper-page-in 0.28s var(--paper-ease);
+  }
+  .paper--music .paper__scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    outline: none;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .paper__music-container {
+    position: relative;
+    width: min(520px, 92%);
+    padding: 2rem 0 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Header */
+  .paper__music-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .paper__music-header .paper__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: var(--color-text-dim);
+  }
+  .paper__music-close {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(237, 241, 242, 0.4);
+    -webkit-backdrop-filter: blur(10px) saturate(108%);
+    backdrop-filter: blur(10px) saturate(108%);
+    border: 1px solid var(--paper-edge);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+    flex: none;
+  }
+  .paper__music-close:hover {
+    color: var(--color-accent);
+    background: rgba(237, 241, 242, 0.62);
+  }
+
+  /* Embed row — just the player, centered */
+  .paper__music-embed {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .paper__music-embed iframe {
+    flex: none;
+    border-radius: 10px;
+  }
+
+  /* Nav controls grouped below the embed */
+  .paper__music-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .paper__music-nav {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(237, 241, 242, 0.4);
+    -webkit-backdrop-filter: blur(10px) saturate(108%);
+    backdrop-filter: blur(10px) saturate(108%);
+    border: 1px solid var(--paper-edge);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    color: var(--color-text-dim);
+    user-select: none;
+  }
+  .paper__music-nav:hover {
+    color: var(--color-accent);
+    background: rgba(237, 241, 242, 0.62);
+  }
+  .paper__music-nav.is-disabled {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+  }
+  .paper__music-arrow {
+    display: block;
+    width: 10px;
+    height: 10px;
+    position: relative;
+  }
+  .paper__music-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-left: 1.8px solid currentColor;
+    border-bottom: 1.8px solid currentColor;
+  }
+  .paper__music-arrow--left::before {
+    left: 4px;
+    transform: translateY(-50%) rotate(45deg);
+  }
+  .paper__music-arrow--right::before {
+    right: 4px;
+    transform: translateY(-50%) rotate(-135deg);
+  }
+
+  /* Track list */
+  .paper__music-tracklist {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .paper__music-track {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.6rem 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: var(--color-text);
+    transition: background 0.15s ease;
+    position: relative;
+  }
+  .paper__music-track:hover {
+    background: rgba(237, 241, 242, 0.35);
+  }
+  .paper__music-track.is-active {
+    background: rgba(237, 241, 242, 0.22);
+  }
+  .paper__music-track.is-active .paper__music-indicator {
+    opacity: 1;
+  }
+  .paper__music-num {
+    font-size: 0.72rem;
+    color: var(--color-text-dim);
+    width: 1.5rem;
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .paper__music-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .paper__music-title {
+    font-size: 0.88rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .paper__music-artist {
+    font-size: 0.72rem;
+    color: var(--color-text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .paper__music-indicator {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent, #94231f);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
   /* Motion */
   @keyframes paper-scrim-in {
     from {
@@ -528,14 +808,37 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
 </style>
 
 <script>
-  const VIEWS = ['about', 'reading'] as const;
+  const VIEWS = ['about', 'reading', 'music'] as const;
   type View = (typeof VIEWS)[number];
 
   const surfaces: Record<View, HTMLElement | null> = {
     about: document.getElementById('about-view'),
     reading: document.getElementById('reading-view'),
+    music: document.getElementById('music-view'),
   };
   const readingScroll = document.getElementById('reading-scroll');
+  const musicScroll = document.getElementById('music-scroll');
+
+  /* ─── Apple Music tracks (US store: longer previews) ─── */
+  const TRACKS = [
+    { label: 'Yunomi — 白猫海贼船', src: 'https://embed.music.apple.com/us/album/%E7%99%BD%E7%8C%AB%E6%B5%B7%E8%B3%8A%E8%88%B9-feat-%E6%97%A5%E5%8D%97%E7%B5%90%E9%87%8C/1449115362?i=1449115365' },
+    { label: '张雨生 — 一天到晚游泳的鱼', src: 'https://embed.music.apple.com/us/album/%E4%B8%80%E5%A4%A9%E5%88%B0%E6%99%9A%E6%B8%B8%E6%B3%B3%E7%9A%84%E9%B1%BC/298780288?i=298780327' },
+    { label: '卫兰 — 离家出走', src: 'https://embed.music.apple.com/us/album/%E7%A6%BB%E5%AE%B6%E5%87%BA%E8%B5%B0/557096396?i=557096400' },
+  ];
+
+  let currentTrack = 0;
+  let musicInited = false;  // true once iframe src has been set
+
+  function renderTrack(trackEls: NodeListOf<Element>, iframe: HTMLIFrameElement, prevBtn: HTMLElement, nextBtn: HTMLElement, setSrc: boolean) {
+    trackEls.forEach((el, i) => {
+      el.classList.toggle('is-active', i === currentTrack);
+    });
+    if (setSrc) {
+      iframe.src = TRACKS[currentTrack].src;
+    }
+    prevBtn.classList.toggle('is-disabled', currentTrack === 0);
+    nextBtn.classList.toggle('is-disabled', currentTrack >= TRACKS.length - 1);
+  }
 
   function currentView(): View | null {
     const key = location.hash.replace(/^#/, '');
@@ -555,6 +858,32 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       readingScroll.scrollTop = 0;
       readingScroll.focus({ preventScroll: true });
     }
+    if (active === 'music') {
+      initMusicView();
+    }
+  }
+
+  function initMusicView() {
+    const iframe = document.getElementById('music-iframe') as HTMLIFrameElement | null;
+    const prevBtn = document.getElementById('music-prev');
+    const nextBtn = document.getElementById('music-next');
+    const tracks = document.querySelectorAll('.paper__music-track');
+    if (!iframe || !prevBtn || !nextBtn) return;
+    // Only set iframe src once (on first open); reassigning reloads the player
+    renderTrack(tracks, iframe, prevBtn, nextBtn, !musicInited);
+    musicInited = true;
+  }
+
+  function switchTrack(delta: number) {
+    const iframe = document.getElementById('music-iframe') as HTMLIFrameElement | null;
+    const prevBtn = document.getElementById('music-prev');
+    const nextBtn = document.getElementById('music-next');
+    const tracks = document.querySelectorAll('.paper__music-track');
+    if (!iframe || !prevBtn || !nextBtn) return;
+    const next = currentTrack + delta;
+    if (next < 0 || next >= TRACKS.length) return;
+    currentTrack = next;
+    renderTrack(tracks, iframe, prevBtn, nextBtn, true);
   }
 
   function openView(view: string) {
@@ -564,12 +893,8 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
 
   function closeView() {
     if (!location.hash) return;
-    if (history.length > 1) {
-      history.back();
-    } else {
-      history.replaceState(null, '', location.pathname + location.search);
-      render();
-    }
+    history.replaceState(null, '', location.pathname + location.search);
+    render();
   }
 
   document.addEventListener('click', (e) => {
@@ -583,9 +908,31 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     if (target.closest('[data-close]')) {
       e.preventDefault();
       closeView();
+      return;
+    }
+    /* Music: prev / next */
+    const prevBtn = target.closest('#music-prev');
+    if (prevBtn) { e.preventDefault(); switchTrack(-1); return; }
+    const nextBtn = target.closest('#music-next');
+    if (nextBtn) { e.preventDefault(); switchTrack(1); return; }
+    /* Music: track selection */
+    const trackBtn = target.closest('.paper__music-track');
+    if (trackBtn) {
+      e.preventDefault();
+      const idx = parseInt(trackBtn.getAttribute('data-track') || '0', 10);
+      if (!isNaN(idx) && idx >= 0 && idx < TRACKS.length) {
+        currentTrack = idx;
+        const iframe = document.getElementById('music-iframe') as HTMLIFrameElement | null;
+        const prevBtn2 = document.getElementById('music-prev');
+        const nextBtn2 = document.getElementById('music-next');
+        const tracks = document.querySelectorAll('.paper__music-track');
+        if (iframe && prevBtn2 && nextBtn2) renderTrack(tracks, iframe, prevBtn2, nextBtn2, true);
+      }
+      return;
     }
   });
 
+  /* Music nav keydown support */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && currentView()) {
       closeView();

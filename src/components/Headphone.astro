@@ -1,10 +1,10 @@
 ---
-// Headphone on the desk, to the left of the notebook.
+// Headphone — click to open Apple Music playlist overlay.
 import hpSvg from '../assets/svg/props/Headphone.svg?raw';
 import SvgAsset from './SvgAsset.astro';
 ---
 
-<div class="headphone" aria-hidden="true">
+<div class="headphone" data-nav="music" role="button" tabindex="0" aria-label="打开歌单">
   <SvgAsset content={hpSvg} />
 </div>
 
@@ -17,12 +17,23 @@ import SvgAsset from './SvgAsset.astro';
     height: calc(22 * var(--cm) * 689 / 418);
     transform: translate(-50%, -50%) rotate(-30deg);
     z-index: 27;
-    pointer-events: none;
+    cursor: pointer;
+    transition: top 0.25s ease, transform 0.25s ease;
+  }
+
+  .headphone:hover,
+  .headphone:focus-visible {
+    top: calc(13% - 12px);
+    transform: translate(-50%, -50%) rotate(-30deg) scale(1.06);
   }
 
   .headphone :global(svg) {
     width: 100%;
     height: 100%;
     display: block;
+  }
+
+  .headphone:focus-visible {
+    outline: none;
   }
 </style>
