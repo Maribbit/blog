@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="demo.gif" alt="Maribbit's Blog — animated demo: a room, a window over a breathing sea, a character that breathes." width="800" />
+  <img src="demo.gif" alt="Maribbit's Blog — animated demo: a room, a window over a breathing sea, a character that breathes." width="400" />
 </p>
 
 <p align="center">
