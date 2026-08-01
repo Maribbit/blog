@@ -30,23 +30,49 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       </header>
 
       <div class="paper__body">
-        <p>你好，我是海兔。这是一个关于图形、克制与实验的 2.5D 博客。</p>
-        <p>
-          比起把内容塞进一张卡片，我更想把它做成一个可以走进去的房间。点亮的时钟、
-          身后的书架，都是可以点开的入口。
+        <p class="paper__pair">
+          <span class="paper__cn">你好！我是海兔。欢迎光临我的博客。</span>
+          <span class="paper__en">Hi! I'm Maribbit. Welcome to my blog.</span>
         </p>
-        <p class="paper__quiet">书架里放着可长读的文字 · 时钟走着真实的时间</p>
-      </div>
+        <p class="paper__pair">
+          <span class="paper__cn">这里是互联网上一个安静的角落。</span>
+          <span class="paper__en">This is a quiet corner of the internet.</span>
+        </p>
+        <p class="paper__pair">
+          <span class="paper__cn">没有针砭时弊、没有针锋相对，</span>
+          <span class="paper__en">No critique of the times, no tit-for-tat,</span>
+        </p>
+        <p class="paper__pair">
+          <span class="paper__cn">只是用我的梦和记忆构建的空间。</span>
+          <span class="paper__en">just a space built from my dreams and memories.</span>
+        </p>
 
-      <!-- Docked to the sheet, not the viewport -->
-      <button
-        class="paper__dock paper__dock--close"
-        type="button"
-        data-close
-        aria-label="关闭"
-      >
-        <span class="paper__x" aria-hidden="true"></span>
-      </button>
+        <footer class="paper__socials">
+          <a
+            href="https://github.com/maribbit"
+            target="_blank"
+            rel="noopener"
+            aria-label="GitHub"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+            </svg>
+          </a>
+          <a
+            href="https://www.xiaohongshu.com/user/profile/"
+            target="_blank"
+            rel="noopener"
+            aria-label="小红书"
+          >
+            <svg viewBox="3 3 14 14" aria-hidden="true">
+              <g>
+                <path fill="currentColor" d="M13.969 17H6.03A3.03 3.03 0 0 1 3 13.97V6.032A3.03 3.03 0 0 1 6.031 3h7.938A3.03 3.03 0 0 1 17 6.032v7.937A3.03 3.03 0 0 1 13.969 17"/>
+                <path fill="#fff" fill-rule="evenodd" d="M15.276 10.24a.6.6 0 0 0-.317-.44.8.8 0 0 0-.388-.097h-.078c-.019 0-.019 0-.019-.02v-.465c0-.058 0-.116-.013-.174a.705.705 0 0 0-.362-.55.95.95 0 0 0-.44-.116h-.316c-.032 0-.032 0-.032-.026v-.22c0-.006 0-.013-.007-.013-.006-.006-.013 0-.013 0h-.685s-.006.007-.006.013v.239c0 .007-.007.007-.013.007h-.446c-.013 0-.013.006-.013.013v.653c0 .038 0 .038.039.038h.4c.04 0 .033.059.033.059v.51s0 .052-.026.052h-.653c-.032 0-.026.039-.026.039v.64s-.006.032.026.032h.64c.039 0 .032 0 .032.032v1.429c0 .038 0 .038.039.038h.633c.04 0 .04 0 .04-.038v-1.448c0-.013 0-.013.012-.013h1.028q.066-.002.123.026a.2.2 0 0 1 .122.18v.524c0 .117-.045.162-.142.162h-.536c-.013 0-.013 0-.013.013 0 .006.207.478.246.575v.006c0 .007.012.013.019.013h.226c.065 0 .226 0 .29-.006.06-.007.124-.013.182-.032a.6.6 0 0 0 .427-.582v-.88a1.4 1.4 0 0 0-.013-.174m-1.5-.55c0 .006-.006.013-.006.013h-.453c-.006 0-.006-.007-.013-.013v-.026l-.006-.55c0-.032 0-.032.032-.032h.323q.031-.002.052.007.07.021.071.09v.511m-1.842 1.519q-.001-.009-.013-.007h-.64c-.02 0-.02 0-.02-.019V9.108c0-.032 0-.032.033-.032h.381c.033 0 .033 0 .033-.032v-.64c0-.04 0-.033-.033-.033h-1.544c-.026 0-.033 0-.033.033v.64c0 .038 0 .032.033.032h.374c.033 0 .033 0 .033.032v2.049c0 .039 0 .039-.039.039h-.575c-.02 0-.026.013-.026.013l-.31.672-.007.013q-.001.008.026.006h2.308c.013 0 .013 0 .013-.013v-.659q.007-.01.006-.02M6.737 8.152h-.665a.014.014 0 0 0-.013.013c0 .168-.007 1.79-.007 2.61v.415c0 .129-.116.116-.123.116h-.323c-.02 0-.02 0-.02.02 0 .019.208.471.246.555q.008.011.026.013c.071 0 .336.006.414-.007a.6.6 0 0 0 .194-.058.58.58 0 0 0 .265-.336.7.7 0 0 0 .032-.239V9.73c0-.485 0-1.448-.006-1.57-.007 0-.013-.007-.02-.007m3.057 2.184h-.387c-.04 0-.065-.039-.052-.077l.517-1.164q.008-.011-.013-.013h-.582c-.045 0-.077-.051-.058-.09l.388-.866q.008-.012-.013-.013H8.91c-.006 0-.006 0-.013.006l-.407.918c-.039.084-.084.168-.116.252-.02.052-.046.104-.059.162a.2.2 0 0 0-.006.084c.006.07.039.13.103.168q.03.018.058.026a.4.4 0 0 0 .15.026h.258c.013 0-.259.588-.304.704a2 2 0 0 0-.065.168c-.006.026-.013.052-.006.078a.21.21 0 0 0 .103.174q.03.018.058.026a.4.4 0 0 0 .149.026h.731c.006 0 .006 0 .012-.006l.252-.57c0-.006-.006-.019-.013-.019m-1.7.407a.64.64 0 0 1-.058-.271c0-.045-.006-.084-.006-.13q-.011-.097-.013-.193c-.006-.071-.013-.142-.013-.213l-.02-.207a2 2 0 0 1-.012-.2 2 2 0 0 1-.013-.195q-.012-.106-.013-.213c0-.013 0-.032-.007-.039 0-.006-.025-.006-.032-.006h-.653c-.013 0-.013 0-.013.013.007.045.007.084.013.13.007.096.013.187.026.283l.02.22c.006.104.013.2.025.304.007.116.02.233.026.35.007.05.007.096.013.148q.018.167.065.323c.039.149.084.29.155.433q.066.147.162.265c.006.006.012.026.019.02 0 0 0-.007.006-.007.04-.084.33-.73.35-.776-.013-.02-.02-.013-.026-.039M5.568 9.077h-.685q-.008-.002-.006.006s0 .026-.007.033a2 2 0 0 0-.013.213q-.011.098-.013.194a2 2 0 0 0-.012.2l-.02.207c-.006.071-.013.142-.013.213a2 2 0 0 0-.013.194c-.006.046-.006.084-.006.13a.7.7 0 0 1-.058.271c-.013.026-.013.02 0 .052.019.039.303.672.349.769l.006.006c.007 0 .013-.013.02-.019.064-.084.116-.175.161-.265.065-.136.116-.284.155-.433.026-.11.045-.213.065-.323.006-.045.006-.097.013-.149.006-.116.02-.233.026-.349.006-.103.013-.2.026-.304l.019-.22a4 4 0 0 1 .026-.284c.006-.045.006-.084.013-.13-.02-.006-.02-.012-.033-.012m3.943 2.12h-.743a1 1 0 0 1-.336-.058q-.012-.001-.013.006l-.317.685q-.002.012.007.013a.6.6 0 0 0 .22.052H9.2c.006 0 .006 0 .013-.007l.31-.678q-.001-.012-.013-.013m5.08-2.12h.343q.039.002.078-.007a.357.357 0 0 0 .271-.42.35.35 0 0 0-.388-.271.354.354 0 0 0-.304.349v.343c-.006 0 0 .006 0 .006"/>
+              </g>
+            </svg>
+          </a>
+        </footer>
+      </div>
     </section>
   </div>
 </div>
@@ -218,16 +244,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     color: var(--color-accent);
     background: rgba(237, 241, 242, 0.62);
   }
-  .paper__dock--close {
-    top: 0.7rem;
-    /* Sit just outside the right edge of the sheet */
-    right: 0;
-    transform: translateX(calc(100% + 0.55rem));
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    padding: 0;
-  }
   .paper__dock--back {
     top: 0.15rem;
     left: 0;
@@ -304,8 +320,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   .paper--card {
     align-items: center;
     justify-content: center;
-    /* Extra side room so the hanging close button is never clipped */
-    padding: 1.25rem 3.25rem;
+    padding: 1.25rem 1.5rem;
   }
   .paper__scrim {
     position: absolute;
@@ -330,10 +345,24 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     /* Allow docks to paint outside the sheet */
     overflow: visible;
   }
+  /* Fine paper grain — gives the card a material surface so it reads
+     against the blurred room instead of looking like flat glass. */
+  .paper--card .paper__sheet::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 120px 120px;
+    mix-blend-mode: soft-light;
+    opacity: 0.6;
+    pointer-events: none;
+  }
   .paper__intro {
     padding: var(--paper-pad-y-card) var(--paper-pad-x-card) 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
     gap: 0.28rem;
   }
   .paper__intro .paper__title::after {
@@ -341,7 +370,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     display: block;
     width: 1.5rem;
     height: 2px;
-    margin-top: 0.6rem;
+    margin: 0.6rem auto 0;
     background: var(--color-accent);
   }
   .paper__body {
@@ -349,12 +378,55 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     font-size: var(--paper-body);
     line-height: var(--paper-body-lh);
     color: var(--paper-ink);
+    text-align: center;
   }
   .paper__body p {
     margin: 0 0 0.9em;
   }
   .paper__body p:last-child {
     margin-bottom: 0;
+  }
+  /* Bilingual pairs: Chinese main line + dimmer English line */
+  .paper__cn {
+    display: block;
+    /* Slightly smaller than the default body size (0.98rem → ~0.9rem) */
+    font-size: 0.92em;
+    font-weight: 600;
+  }
+  .paper__en {
+    display: block;
+    margin-top: 0.1em;
+    font-size: 0.72em;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    /* Darker than --color-text-dim for clearer separation from the sea */
+    color: #56616a;
+  }
+  /* Social links: horizontal row centered below the body */
+  .paper__socials {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.1rem;
+    margin-top: 1.4em;
+  }
+  .paper__socials a {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    color: #56616a;
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+  .paper__socials svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  .paper__socials a:hover {
+    color: var(--color-accent);
+    transform: translateY(-1px);
   }
   .paper__quiet {
     margin-top: 1.1em !important;
@@ -387,7 +459,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       );
     -webkit-backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
     backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
-    animation: paper-page-in 0.28s var(--paper-ease);
   }
   .paper__scroll {
     position: absolute;
@@ -532,11 +603,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     .paper--card {
       padding: 1rem 1rem 1.25rem;
     }
-    .paper__dock--close {
-      top: 0.55rem;
-      right: 0.55rem;
-      transform: none;
-    }
     .paper__stage--page {
       --dock-gutter: 1rem;
       padding-top: calc(var(--paper-pad-y-page) + 0.25rem);
@@ -572,7 +638,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       );
     -webkit-backdrop-filter: blur(14px) saturate(108%);
     backdrop-filter: blur(14px) saturate(108%);
-    animation: paper-page-in 0.28s var(--paper-ease);
   }
   .paper--music .paper__scroll {
     position: absolute;
@@ -780,7 +845,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     transition: opacity 0.15s ease;
   }
 
-  /* Motion */
+  /* Motion — no opacity fades; the card slides, the scrim dims */
   @keyframes paper-scrim-in {
     from {
       opacity: 0;
@@ -791,27 +856,16 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   }
   @keyframes paper-card-in {
     from {
-      opacity: 0;
       transform: translateY(10px);
     }
     to {
-      opacity: 1;
       transform: none;
-    }
-  }
-  @keyframes paper-page-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .paper__scrim,
-    .paper__stage--card,
-    .paper__veil {
+    .paper__stage--card {
       animation: none;
     }
   }
