@@ -1,9 +1,15 @@
 ---
 interface Props {
   title?: string;
+  description?: string;
 }
 
-const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
+const SITE = 'https://maribbit.com';
+const {
+  title = "Maribbit's Blog | 海兔的博客",
+  description = "Maribbit's blog — a quiet corner of the internet. Handcrafted scenes built with SVG and low-poly graphics: a room, a window over the sea, a character that breathes.",
+} = Astro.props;
+const pageUrl = SITE + Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -12,10 +18,117 @@ const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary -->
     <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content="SVG, low-poly, 3D illusion, 2.5D, web graphics, Astro, creative coding, handcrafted web, minimalist design, 低多边形, 图形博客" />
+    <meta name="author" content="Maribbit" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#E8EBEC" />
+    <link rel="canonical" href={pageUrl} />
+
+    <!-- Favicon: static SVG fallback, then upgraded to a live-ticking
+         clock by the script at the end of <body>. -->
+    <link rel="icon" id="favicon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/og.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Maribbit's Blog" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={SITE + '/og.png'} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="zh_CN" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={SITE + '/og.png'} />
   </head>
   <body>
     <slot />
+    <script is:inline>
+      /* Live-ticking clock favicon.
+         Draws the same hexagonal clock as the wall clock onto a small
+         canvas once per second and swaps it into <link id="favicon">,
+         so the browser tab shows the real time. Falls back gracefully
+         to the static favicon.svg when canvas isn't available. */
+      (function () {
+        var link = document.getElementById('favicon');
+        if (!link) return;
+        var SIZE = 64, CX = 32, CY = 32, R = 28, TAU = Math.PI * 2;
+        var c = document.createElement('canvas');
+        c.width = c.height = SIZE;
+        var ctx = c.getContext('2d');
+        if (!ctx) return;
+
+        function hex() {
+          ctx.beginPath();
+          for (var i = 0; i < 6; i++) {
+            var a = (Math.PI / 180) * (60 * i - 30);
+            var x = CX + R * Math.cos(a);
+            var y = CY + R * Math.sin(a);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          }
+          ctx.closePath();
+        }
+        function tickMark(angle) {
+          ctx.save();
+          ctx.translate(CX, CY);
+          ctx.rotate(angle);
+          ctx.fillStyle = '#79838a';
+          ctx.fillRect(-1.2, -(R - 4), 2.4, 5);
+          ctx.restore();
+        }
+        function hand(angle, len, w, color) {
+          ctx.save();
+          ctx.translate(CX, CY);
+          ctx.rotate(angle);
+          ctx.fillStyle = color;
+          ctx.fillRect(-w / 2, -len, w, len);
+          ctx.restore();
+        }
+
+        function draw() {
+          ctx.clearRect(0, 0, SIZE, SIZE);
+          hex();
+          ctx.fillStyle = '#eef2f3';
+          ctx.fill();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#c2cacd';
+          ctx.stroke();
+
+          for (var i = 0; i < 4; i++) tickMark((i * TAU) / 4);
+
+          var now = new Date();
+          var s = now.getSeconds();
+          var m = now.getMinutes() + s / 60;
+          var h = (now.getHours() % 12) + m / 60;
+
+          hand((h / 12) * TAU, 11, 3.4, '#2d3338');
+          hand((m / 60) * TAU, 16, 2.4, '#2d3338');
+          hand((s / 60) * TAU, 19, 1.3, '#94231f');
+
+          ctx.save();
+          ctx.translate(CX, CY);
+          ctx.rotate(TAU / 8);
+          ctx.fillStyle = '#2d3338';
+          ctx.fillRect(-2.6, -2.6, 5.2, 5.2);
+          ctx.restore();
+
+          link.type = 'image/png';
+          link.href = c.toDataURL('image/png');
+        }
+
+        draw();
+        setInterval(draw, 1000);
+      })();
+    </script>
   </body>
 </html>
 
@@ -23,7 +136,7 @@ const { title = "Maribbit's Blog 2.5D | 海兔的 2.5D 博客" } = Astro.props;
   :root {
     /* Cool, clean, airy palette. The character is desaturated cool-gray, so the
        room reads fresher on a neutral blue-gray rather than a warm beige. */
-    --color-bg: #edf1f2; /* wall */
+    --color-bg: #e8ebec; /* wall */
     --color-floor: #dde5e6; /* ground band */
     --color-line: #c2cacd;
     --color-text: #2d3338;
