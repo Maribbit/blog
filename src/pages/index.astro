@@ -20,7 +20,7 @@ import Desk from '../components/Desk.astro';
         </div>
         <OpenWindow />
 
-        <div class="sill sill--clock">
+        <div class="wall-item wall-item--clock">
           <WallClock />
         </div>
 
@@ -307,15 +307,18 @@ import Desk from '../components/Desk.astro';
     z-index: -1;
   }
 
-  /* Sill items: fractions of the window so they stay in proportion. */
-  .sill {
+  /* Wall items: fractions of the window so they stay in proportion. */
+  .wall-item {
     position: absolute;
     z-index: 6;
   }
 
-  .sill--clock {
-    left: 8%;
-    bottom: 5.5%;
+  /* Wall clock hangs on the wall, upper-left of the window frame:
+     its right edge sits 12% of win-w left of the frame, and its top
+     edge 6% of win-h above the frame's top edge. */
+  .wall-item--clock {
+    left: calc(-12% - var(--clock-size));
+    top: -6%;
     width: var(--clock-size);
     height: var(--clock-size);
   }

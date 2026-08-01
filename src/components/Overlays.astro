@@ -1,8 +1,7 @@
 ---
-// Three navigable surfaces on the shared Maribbit Paper system:
-//   #about   -> paper card  (clicking the character)
-//   #reading -> paper page  (clicking the notebook)
-//   #music   -> paper card  (clicking the headphone)
+// Two navigable surfaces on the shared Maribbit Paper system:
+//   #about -> paper card  (clicking the character or the notebook)
+//   #music -> paper card  (clicking the headphone)
 //
 // Layout philosophy: content-centric, not chrome-centric.
 // Dismiss / back hang off the content box itself (left/right docks),
@@ -10,7 +9,6 @@
 // to viewport corners. No full-bleed top bars.
 //
 // Any [data-nav="x"] opens #x; [data-close] / Esc / browser Back close.
-import { Content, frontmatter } from '../articles/finding-breath.md';
 ---
 
 <!-- ABOUT: note in the room; close hangs off the card's right edge. -->
@@ -77,70 +75,16 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   </div>
 </div>
 
-<!-- READING: floating column; back hangs left, label hangs right. -->
-<div class="paper paper--page" id="reading-view" data-open="false" aria-hidden="true">
-  <div class="paper__veil" aria-hidden="true"></div>
-
-  <div class="paper__scroll" id="reading-scroll" tabindex="-1">
-    <div class="paper__stage paper__stage--page">
-      <div class="paper__col">
-        <button
-          class="paper__dock paper__dock--back"
-          type="button"
-          data-close
-          aria-label="返回"
-        >
-          <span class="paper__arrow" aria-hidden="true"></span>
-          <span class="paper__dock-label">返回</span>
-        </button>
-
-        <span class="paper__dock paper__dock--mark" aria-hidden="true">Reading</span>
-
-        <nav class="paper__index" aria-label="文章索引">
-          <span class="paper__label">近期</span>
-          <ol>
-            <li>
-              <a href="#reading">在低面数里寻找呼吸感</a>
-              <time>2026 · 07</time>
-            </li>
-            <li>
-              <a href="#reading">当 AI 成为我的绘图搭档</a>
-              <time>2026 · 06</time>
-            </li>
-            <li>
-              <a href="#reading">克制，是一种设计的勇气</a>
-              <time>2026 · 05</time>
-            </li>
-          </ol>
-        </nav>
-
-        <article class="paper-prose">
-          <p class="paper-prose__kicker">{frontmatter.kicker}</p>
-          <h1>{frontmatter.title}</h1>
-          <p class="paper-prose__meta">
-            {frontmatter.date} · {frontmatter.readingTime}
-          </p>
-
-          <div class="paper-prose__body">
-            <Content />
-          </div>
-
-          <div class="paper-prose__end" aria-hidden="true"></div>
-        </article>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- MUSIC: full-width overlay with track navigation. -->
 <div class="paper paper--music" id="music-view" data-open="false" aria-hidden="true">
   <div class="paper__veil paper__veil--music" aria-hidden="true"></div>
 
   <div class="paper__scroll" id="music-scroll" tabindex="-1">
     <div class="paper__music-container">
-      <div class="paper__music-header">
-        <span class="paper__music-title-label">海兔的歌单<br />Maribbit's Playlist</span>
-      </div>
+      <header class="paper__intro paper__intro--music">
+        <span class="paper__label">Music</span>
+        <h2 class="paper__title">海兔的歌单</h2>
+      </header>
 
       <!-- Track list on top: read it first, then play below -->
       <div class="paper__music-tracklist">
@@ -225,59 +169,7 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     color: var(--color-text);
   }
 
-  /* ---------- Dock controls (hang off content) ---------- */
-  .paper__dock {
-    position: absolute;
-    z-index: 3;
-    border: none;
-    background: rgba(237, 241, 242, 0.4);
-    -webkit-backdrop-filter: blur(10px) saturate(108%);
-    backdrop-filter: blur(10px) saturate(108%);
-    border: 1px solid var(--paper-edge);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-    color: var(--color-text-dim);
-    font: inherit;
-    cursor: pointer;
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-  }
-  .paper__dock:hover {
-    color: var(--color-accent);
-    background: rgba(237, 241, 242, 0.62);
-  }
-  .paper__dock--back {
-    top: 0.15rem;
-    left: 0;
-    transform: translateX(calc(-100% - 0.7rem));
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.48rem 0.7rem 0.48rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    letter-spacing: 0.06em;
-    color: var(--color-text);
-    white-space: nowrap;
-  }
-  .paper__dock--mark {
-    top: 0.55rem;
-    right: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    cursor: default;
-    pointer-events: none;
-    padding: 0;
-    font-size: var(--paper-label);
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    writing-mode: vertical-rl;
-    transform: translateX(calc(100% + 0.85rem)) rotate(180deg);
-    color: var(--color-text-dim);
-    opacity: 0.8;
-    user-select: none;
-  }
+  /* ---------- Card controls ---------- */
   .paper__x {
     position: absolute;
     inset: 0;
@@ -297,23 +189,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
   }
   .paper__x::after {
     transform: translate(-50%, -50%) rotate(-45deg);
-  }
-  .paper__arrow {
-    position: relative;
-    width: 10px;
-    height: 10px;
-    flex: none;
-  }
-  .paper__arrow::before {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 50%;
-    width: 7px;
-    height: 7px;
-    border-left: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: translateY(-50%) rotate(45deg);
   }
 
   /* ──────────── Card ──────────── */
@@ -365,13 +240,9 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     text-align: center;
     gap: 0.28rem;
   }
-  .paper__intro .paper__title::after {
-    content: '';
-    display: block;
-    width: 1.5rem;
-    height: 2px;
-    margin: 0.6rem auto 0;
-    background: var(--color-accent);
+  .paper__intro .paper__title {
+    /* Replaces the removed accent bar: keeps title→body breathing room */
+    margin-bottom: 0.4rem;
   }
   .paper__body {
     padding: 1rem var(--paper-pad-x-card) calc(var(--paper-pad-y-card) + 0.1rem);
@@ -428,192 +299,11 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     color: var(--color-accent);
     transform: translateY(-1px);
   }
-  .paper__quiet {
-    margin-top: 1.1em !important;
-    padding-top: 1em;
-    border-top: 1px solid var(--paper-hairline);
-    color: var(--color-text-dim);
-    font-size: var(--paper-quiet);
-    letter-spacing: 0.02em;
-    line-height: 1.55;
-  }
 
-  /* ──────────── Page ──────────── */
-  .paper--page {
-    display: none;
-  }
-  .paper--page[data-open='true'] {
-    display: block;
-  }
-  /* Soft veil: denser on the reading axis, open at the edges so the sea shows */
-  .paper__veil {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        ellipse 62% 74% at 50% 42%,
-        var(--paper-bg-dense) 0%,
-        rgba(237, 241, 242, 0.34) 55%,
-        rgba(237, 241, 242, 0.1) 100%
-      );
-    -webkit-backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
-    backdrop-filter: blur(var(--paper-blur)) saturate(var(--paper-saturate));
-  }
-  .paper__scroll {
-    position: absolute;
-    inset: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-    outline: none;
-  }
-  .paper__stage--page {
-    /* Reserve side gutters so hanging docks aren't clipped by the scrollport */
-    --dock-gutter: clamp(4.5rem, 12vw, 7.5rem);
-    width: min(
-      calc(var(--paper-col) + 2 * var(--dock-gutter)),
-      100%
-    );
-    margin: 0 auto;
-    padding: var(--paper-pad-y-page) var(--dock-gutter) 5.5rem;
-  }
-  .paper__col {
-    position: relative;
-    width: min(var(--paper-col), 100%);
-    margin: 0 auto;
-    background: linear-gradient(
-      to bottom,
-      rgba(237, 241, 242, 0.36) 0%,
-      rgba(237, 241, 242, 0.2) 100%
-    );
-    border: 1px solid var(--paper-hairline);
-    box-shadow: var(--paper-shadow);
-    padding: clamp(1.5rem, 4vh, 2.25rem) var(--paper-pad-x-page)
-      clamp(2rem, 5vh, 2.75rem);
-    -webkit-backdrop-filter: blur(8px) saturate(108%);
-    backdrop-filter: blur(8px) saturate(108%);
-    overflow: visible;
-  }
-
-  /* Index */
-  .paper__index {
-    margin-bottom: clamp(1.75rem, 4vh, 2.5rem);
-    padding-bottom: 1.15rem;
-    border-bottom: 1px solid var(--paper-hairline);
-  }
-  .paper__index .paper__label {
-    margin-bottom: 0.75rem;
-  }
-  .paper__index ol {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .paper__index li {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1.25rem;
-    padding: 0.38rem 0;
-  }
-  .paper__index a {
-    color: var(--color-text);
-    text-decoration: none;
-    font-size: 0.92rem;
-    letter-spacing: 0.01em;
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.15s ease, color 0.15s ease;
-  }
-  .paper__index a:hover {
-    color: var(--color-accent);
-    border-bottom-color: rgba(148, 35, 31, 0.35);
-  }
-  .paper__index time {
-    flex: none;
-    font-size: var(--paper-quiet);
-    color: var(--color-text-dim);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-  }
-
-  /* Long-form */
-  .paper-prose {
-    color: var(--color-text);
-  }
-  .paper-prose__kicker {
-    font-size: var(--paper-label);
-    letter-spacing: var(--paper-label-track);
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0 0 0.85rem;
-  }
-  .paper-prose h1 {
-    font-size: var(--paper-title-page);
-    line-height: 1.22;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    margin: 0 0 0.65rem;
-  }
-  .paper-prose__meta {
-    color: var(--color-text-dim);
-    font-size: var(--paper-quiet);
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-    margin: 0 0 1.85rem;
-  }
-  .paper-prose__body :global(h2) {
-    font-size: 1.12rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    margin: 2.2rem 0 0.65rem;
-    color: var(--color-text);
-  }
-  .paper-prose__body :global(p) {
-    font-size: var(--paper-body);
-    line-height: var(--paper-body-lh);
-    margin: 0 0 1.1em;
-    color: var(--paper-ink);
-  }
-  .paper-prose__body :global(blockquote) {
-    margin: 1.7rem 0;
-    padding: 0.15rem 0 0.15rem 1.1rem;
-    border-left: 2px solid var(--color-accent);
-    font-size: 1.02rem;
-    line-height: 1.7;
-    color: var(--color-text);
-  }
-  .paper-prose__body :global(blockquote p) {
-    margin: 0;
-    color: inherit;
-  }
-  .paper-prose__end {
-    width: 2rem;
-    height: 1px;
-    margin: 2.75rem auto 0;
-    background: var(--paper-hairline);
-  }
-
-  /*
-    Compact widths: keep docks near content, but don't force them into
-    viewport corners. Slide them onto the top edge of the content box
-    instead of the left/right exterior when gutters get too tight.
-  */
+  /* Compact widths */
   @media (max-width: 640px) {
     .paper--card {
       padding: 1rem 1rem 1.25rem;
-    }
-    .paper__stage--page {
-      --dock-gutter: 1rem;
-      padding-top: calc(var(--paper-pad-y-page) + 0.25rem);
-    }
-    .paper__dock--back {
-      top: 0;
-      left: 0;
-      transform: translateY(calc(-100% - 0.55rem));
-    }
-    .paper__dock--mark {
-      display: none;
     }
   }
 
@@ -661,27 +351,9 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
     gap: 1rem;
   }
 
-  /* Header — centered bilingual title */
-  .paper__music-header {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-  .paper__music-title-label {
-    font-size: 1.05rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    line-height: 1.3;
-    color: var(--color-text);
-  }
-  .paper__music-title-label br + * {
-    font-size: 0.68rem;
-    font-weight: 400;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
+  /* Header — About-style intro (label + title + accent bar) */
+  .paper__intro--music {
+    padding: 0;
   }
   .paper__music-close {
     position: relative;
@@ -872,16 +544,13 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
 </style>
 
 <script>
-  const VIEWS = ['about', 'reading', 'music'] as const;
+  const VIEWS = ['about', 'music'] as const;
   type View = (typeof VIEWS)[number];
 
   const surfaces: Record<View, HTMLElement | null> = {
     about: document.getElementById('about-view'),
-    reading: document.getElementById('reading-view'),
     music: document.getElementById('music-view'),
   };
-  const readingScroll = document.getElementById('reading-scroll');
-  const musicScroll = document.getElementById('music-scroll');
 
   /* ─── Apple Music tracks (US store: longer previews) ─── */
   const TRACKS = [
@@ -917,10 +586,6 @@ import { Content, frontmatter } from '../articles/finding-breath.md';
       const open = view === active;
       el.dataset.open = String(open);
       el.setAttribute('aria-hidden', String(!open));
-    }
-    if (active === 'reading' && readingScroll) {
-      readingScroll.scrollTop = 0;
-      readingScroll.focus({ preventScroll: true });
     }
     if (active === 'music') {
       initMusicView();
