@@ -1,4 +1,4 @@
-# AGENTS.md for Maribbit's Blog 2.5D
+# AGENTS.md for Maribbit's Blog
 
 ## Talking Philosophy: Be economical
 

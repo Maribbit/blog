@@ -1,6 +1,6 @@
 ## Project Definition ｜ 项目定义
 
-Maribbit's Blog 2.5D | 海兔的 2.5D 博客
+Maribbit's Blog | 海兔的博客
 
 This project is Maribbit's personal blog, exploring AI-assisted graphic programming.
 
