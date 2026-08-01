@@ -1,8 +1,18 @@
+<p align="center">
+  <img src="demo.gif" alt="Maribbit's Blog — animated demo: a room, a window over a breathing sea, a character that breathes." width="800" />
+</p>
+
+<p align="center">
+  <b>Maribbit's Blog <br/>
+  海兔的博客</b><br/>
+</p>
+
+
 ## Project Definition ｜ 项目定义
 
-Maribbit's Blog | 海兔的博客
-
 This project is Maribbit's personal blog, exploring AI-assisted graphic programming.
+
+这是一个个人博客项目，探索 AI 辅助的图形化编程。
 
 ## License ｜ 开源协议
 
