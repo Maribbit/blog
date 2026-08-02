@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="页面未找到 | Maribbit's Blog"
+  description="这个页面不存在，但窗外的海还在。"
+>
+  <main class="room room--404" id="room">
+    <div class="stage stage--404" id="stage">
+      <div class="wall wall--404" aria-hidden="true"></div>
+
+      <div class="notfound">
+        <p class="notfound__label">404</p>
+        <h1 class="notfound__title">这个页面不存在</h1>
+        <p class="notfound__subtitle">Page Not Found</p>
+        <p class="notfound__text">
+          窗外的海还在，回到房间继续逛逛吧。
+          <span class="notfound__text-en">
+            The sea is still outside the window — come back in and look around.
+          </span>
+        </p>
+        <a class="notfound__link" href="/">
+          <svg class="notfound__home" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 3l8 7h-2v9h-4.5v-6h-3v6H6v-9H4l8-7z"/>
+          </svg>
+          <span>回到首页</span>
+          <span class="notfound__link-en">Back Home</span>
+        </a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style is:global>
+  .room--404 {
+    position: fixed;
+    inset: 0;
+    background-color: var(--color-bg, #e8ebec);
+  }
+
+  .stage--404 {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Reuse the wall's paper-grain texture so the 404 page feels like
+     the same room, not a separate error page. */
+  .wall--404 {
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='1.6' intercept='0.35'/%3E%3CfeFuncG type='linear' slope='1.6' intercept='0.35'/%3E%3CfeFuncB type='linear' slope='1.6' intercept='0.35'/%3E%3C/feComponentTransfer%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 0 1'/%3E%3C/filter%3E%3Crect width='1920' height='1080' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: cover;
+    mix-blend-mode: multiply;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .notfound {
+    position: relative;
+    text-align: center;
+    color: var(--color-text, #2d3338);
+    padding: 2rem;
+  }
+
+  .notfound__label {
+    font-size: clamp(4rem, 12vw, 7rem);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-text-dim, #79838a);
+    line-height: 1;
+    margin: 0 0 1rem;
+  }
+
+  .notfound__title {
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    font-weight: 600;
+    margin: 0 0 0.35rem;
+  }
+
+  .notfound__subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-text-dim, #79838a);
+    margin: 0 0 1.1rem;
+  }
+
+  .notfound__text {
+    font-size: 0.95rem;
+    color: var(--color-text-dim, #79838a);
+    margin: 0 0 1.75rem;
+    line-height: 1.7;
+  }
+
+  .notfound__text-en {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.82em;
+    letter-spacing: 0.02em;
+  }
+
+  .notfound__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.5rem;
+    border: 1px solid var(--color-line, #c2cacd);
+    border-radius: 999px;
+    color: var(--color-text, #2d3338);
+    text-decoration: none;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .notfound__home {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  .notfound__link-en {
+    font-size: 0.74em;
+    letter-spacing: 0.06em;
+    color: var(--color-text-dim, #79838a);
+  }
+
+  .notfound__link:hover {
+    color: var(--color-accent, #94231f);
+    border-color: rgba(148, 35, 31, 0.4);
+    background: rgba(237, 241, 242, 0.4);
+    transform: translateY(-1px);
+  }
+</style>

@@ -31,7 +31,14 @@ const pageUrl = SITE + Astro.url.pathname;
     <!-- Favicon: static SVG fallback, then upgraded to a live-ticking
          clock by the script at the end of <body>. -->
     <link rel="icon" id="favicon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/og.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Warm the connection to Apple Music so the embed player
+         (loaded only when the music overlay opens) starts faster. -->
+    <link rel="preconnect" href="https://embed.music.apple.com" crossorigin />
+    <link rel="dns-prefetch" href="https://embed.music.apple.com" />
+    <link rel="preconnect" href="https://music.apple.com" />
+    <link rel="dns-prefetch" href="https://music.apple.com" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -39,7 +46,7 @@ const pageUrl = SITE + Astro.url.pathname;
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={pageUrl} />
-    <meta property="og:image" content={SITE + '/og.png'} />
+    <meta property="og:image" content={SITE + '/og.jpg'} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="zh_CN" />
@@ -48,7 +55,7 @@ const pageUrl = SITE + Astro.url.pathname;
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={SITE + '/og.png'} />
+    <meta name="twitter:image" content={SITE + '/og.jpg'} />
   </head>
   <body>
     <slot />

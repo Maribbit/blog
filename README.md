@@ -19,14 +19,14 @@ This project is Maribbit's personal blog, exploring AI-assisted graphic programm
 This project is **dual-licensed**:
 
 - **Code** (Astro components, TypeScript utilities, styles, configuration) — [MIT License](LICENSE). You are free to use, modify, and distribute the code.
-- **Art & Content** (the character, SVG illustrations, scene assets, `og.png`, and any textual content) — [CC BY-NC-SA 4.0](LICENSE-CC-BY-NC-SA-4.0). NonCommercial use only; you may share and adapt with attribution and share-alike.
+- **Art & Content** (the character, SVG illustrations, scene assets, `og.jpg`, and any textual content) — [CC BY-NC-SA 4.0](LICENSE-CC-BY-NC-SA-4.0). NonCommercial use only; you may share and adapt with attribution and share-alike.
 
 > **Trademark notice**: The GitHub and Xiaohongshu (小红书) logos used in the About page belong to their respective owners and are not covered by the licenses above.
 
 本项目采用**双协议**：
 
 - **代码**（Astro 组件、TypeScript 工具、样式、配置）— [MIT 协议](LICENSE)，可自由使用、修改、分发。
-- **美术与内容**（角色、SVG 插画、场景素材、`og.png` 及文字内容）— [CC BY-NC-SA 4.0](LICENSE-CC-BY-NC-SA-4.0)，仅限非商业使用，须署名且以相同方式共享。
+- **美术与内容**（角色、SVG 插画、场景素材、`og.jpg` 及文字内容）— [CC BY-NC-SA 4.0](LICENSE-CC-BY-NC-SA-4.0)，仅限非商业使用，须署名且以相同方式共享。
 
 > **商标声明**：关于页面使用的 GitHub 与小红书图标分属其各自权利人所有，不受上述协议约束。
 
