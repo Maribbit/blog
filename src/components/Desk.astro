@@ -75,7 +75,10 @@ import Notebook from './Notebook.astro';
     bottom: 6%;
     transform: translateX(-50%);
     z-index: 2;
-    font-size: clamp(0.5rem, 0.85vw, 0.7rem);
+    /* Sized in scene units (--cm, height-driven) like every other prop,
+       NOT viewport width — the desk's pixel size doesn't change when
+       the window is stretched horizontally, so neither should the text. */
+    font-size: calc(2.6 * var(--cm));
     letter-spacing: 0.1em;
     color: rgba(45, 51, 56, 0.42);
     text-decoration: none;
