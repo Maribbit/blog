@@ -586,6 +586,10 @@
       const open = view === active;
       el.dataset.open = String(open);
       el.setAttribute('aria-hidden', String(!open));
+      /* inert makes the closed view un-focusable and un-interactive,
+         so focus can never be retained inside a hidden surface. */
+      if (open) el.removeAttribute('inert');
+      else el.setAttribute('inert', '');
     }
     if (active === 'music') {
       initMusicView();
@@ -615,6 +619,10 @@
     renderTrack(tracks, iframe, prevBtn, nextBtn, true);
   }
 
+  /* Remember which element opened the current view, so we can return
+     focus to it when the view closes. */
+  let lastTrigger: HTMLElement | null = null;
+
   function openView(view: string) {
     if (location.hash === `#${view}`) return;
     location.hash = `#${view}`;
@@ -624,6 +632,11 @@
     if (!location.hash) return;
     history.replaceState(null, '', location.pathname + location.search);
     render();
+    /* Return focus to the element that opened the view. */
+    if (lastTrigger) {
+      lastTrigger.focus({ preventScroll: true });
+      lastTrigger = null;
+    }
   }
 
   document.addEventListener('click', (e) => {
@@ -631,6 +644,7 @@
     const trigger = target.closest('[data-nav]');
     if (trigger) {
       e.preventDefault();
+      lastTrigger = trigger as HTMLElement;
       openView(trigger.getAttribute('data-nav') as string);
       return;
     }
@@ -672,6 +686,7 @@
       const view = el?.closest('[data-nav]')?.getAttribute('data-nav');
       if (view) {
         e.preventDefault();
+        lastTrigger = el;
         openView(view);
       }
     }
