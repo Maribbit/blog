@@ -157,11 +157,14 @@ export function buildClouds(
     const group = document.createElementNS(svgNS, 'g') as SVGGElement;
     const topEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
     const bottomEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
-    topEl.setAttribute('d', makeTopPath(spec.x, spec.baseY, spec.width, pts));
+    /* Paths are built in LOCAL coordinates (x = 0 at the cloud's left
+       edge). The group drifts via a GPU-composited transform instead
+       of rebuilding bezier strings every frame — the big mobile win. */
+    topEl.setAttribute('d', makeTopPath(0, spec.baseY, spec.width, pts));
     topEl.setAttribute('fill', CLOUD_COLORS.top);
     topEl.setAttribute('stroke', 'none');
     topEl.setAttribute('stroke-linejoin', 'round');
-    bottomEl.setAttribute('d', makeBottomPath(spec.x, spec.baseY, spec.width, spec.bOffset, spec.bThick, pts));
+    bottomEl.setAttribute('d', makeBottomPath(0, spec.baseY, spec.width, spec.bOffset, spec.bThick, pts));
     bottomEl.setAttribute('fill', CLOUD_COLORS.bottom);
     bottomEl.setAttribute('stroke', CLOUD_COLORS.bottom);
     bottomEl.setAttribute('stroke-width', '1');
@@ -172,6 +175,9 @@ export function buildClouds(
     group.appendChild(topEl);
     group.appendChild(bottomEl);
     container.appendChild(group);
+    /* Local coords: x starts at 0; the group transform carries the
+       absolute position. */
+    group.style.transform = `translateX(${spec.x}px)`;
     clouds.push({
       group, topEl, bottomEl,
       x: spec.x, width: spec.width, baseY: spec.baseY,
@@ -192,9 +198,11 @@ export function buildClouds(
         c.bThick = spec.bThick;
         c.pts = makeCloudPoints(spec.width, spec.maxHeight);
         c.speed = 0.15 + Math.random() * 0.35;
+        /* Only on wrap do we rebuild paths (local coords, x = 0). */
+        c.topEl.setAttribute('d', makeTopPath(0, c.baseY, c.width, c.pts));
+        c.bottomEl.setAttribute('d', makeBottomPath(0, c.baseY, c.width, c.bOffset, c.bThick, c.pts));
       }
-      c.topEl.setAttribute('d', makeTopPath(c.x, c.baseY, c.width, c.pts));
-      c.bottomEl.setAttribute('d', makeBottomPath(c.x, c.baseY, c.width, c.bOffset, c.bThick, c.pts));
+      c.group.style.transform = `translateX(${c.x}px)`;
     }
   }
 

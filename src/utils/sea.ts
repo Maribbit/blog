@@ -52,24 +52,30 @@ export function buildOcean(
 ): { layers: SeaLayer[]; animate: (time: number) => void } {
   const seaTopY = config.seaTopY;
   const CONFIG = {
-    layersCount: 40,
+    /* Perf: fewer layers & wider steps ⇒ fewer <path> nodes and fewer
+       points updated per frame. (Safari/Firefox repaint SVG paths
+       slower than Chrome, so the mesh is tuned lean.) */
+    layersCount: 28,
     flatSeaRatio: 0.05,
     ampYFar: 0,
     ampYNear: 58,
-    stepXFar: 221,
-    stepXNear: 133,
+    stepXFar: 250,
+    stepXNear: 155,
     perspectiveYExp: 2.2,
     perspectiveMeshExp: 2.0,
+    /* Color: near sea lifted so the near waves actually read —
+       previously every near strip clamped to the dark floor (lum 100)
+       and the wave bands were invisible. */
     colorFar: [172, 180, 186] as [number, number, number],
-    colorNear: [112, 122, 132] as [number, number, number],
-    colorMinClamp: [92, 102, 112] as [number, number, number],
+    colorNear: [138, 147, 155] as [number, number, number],
+    colorMinClamp: [118, 128, 136] as [number, number, number],
     colorPerspectiveExp: 2.5,
     varianceFar: 2,
-    varianceNear: 260,
-    colorPeakShift: -0.45,
+    varianceNear: 170,
+    colorPeakShift: -0.15,
     colorSpread: 0.5,
     layerAltShift: 15,
-    strokeHighlight: 4,
+    strokeHighlight: 6,
     colorAnimAmpFar: 0.5,
     colorAnimAmpNear: 32,
     colorAnimSpeed: 0.8,

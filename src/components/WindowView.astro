@@ -101,7 +101,7 @@
     ? buildOcean(seaContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY })
     : { animate: () => {} };
 
-  /* ─── Build clouds ─── */
+  /* ─── Build clouds (GPU-composited drift) ─── */
   const cloudContainer = document.getElementById('cloud-layer') as unknown as SVGGElement;
   const { update: cloudUpdate } = cloudContainer
     ? buildClouds(cloudContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H })
