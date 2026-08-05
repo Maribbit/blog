@@ -2,18 +2,22 @@
 // WindowView — the scene visible through the open window.
 //
 // Layer stack (bottom → top):
-//   1. Sky     — vertical gradient, full viewBox
-//   2. Clouds  — drifting 2.5D cloud shapes (src/utils/clouds.ts)
-//   3. Islands — distant islands + lighthouse (src/utils/islands.ts)
-//   4. Ocean   — low-poly animated sea (src/utils/sea.ts)  ← on top so
-//                waves overlap island bases naturally
+//   1. Back SVG   — sky gradient + far-sea gradient rect
+//   2. Sea canvas — plain HTML <canvas> (no foreignObject: iOS Safari
+//                   does not reliably render HTML inside foreignObject,
+//                   especially under a transformed ancestor, and it can
+//                   break the whole SVG subtree on WebKit)
+//   3. Front SVG  — clouds + islands
 //
-// The viewBox (1698×835) matches the frame glass opening exactly.
+// All three layers share the same viewBox (1698×835); the canvas uses
+// object-fit:cover which is the exact same scale/crop math as the SVGs'
+// preserveAspectRatio="xMidYMid slice", so every feature stays aligned.
 ---
 
 <div class="window-view" aria-hidden="true">
+  <!-- Back SVG: sky + far-sea gradient + (SVG sea fallback) -->
   <svg
-    class="window-view__svg"
+    class="window-view__svg window-view__svg--back"
     viewBox="0 0 1698 835"
     preserveAspectRatio="xMidYMid slice"
     xmlns="http://www.w3.org/2000/svg"
@@ -43,7 +47,7 @@
       fill="url(#SkyGradient)"
     />
 
-    <!-- Base sea gradient rect (re-positioned by sea.ts) -->
+    <!-- Base sea gradient rect (re-positioned by sea.ts SVG path only) -->
     <rect
       id="base-sea-rect"
       x="0"
@@ -53,54 +57,66 @@
       fill="url(#BaseSeaGradient)"
     />
 
-    <!-- Canvas-based ocean: a single <canvas> replaces 21 SVG <path>
-         re-parses per frame. Hosted in a foreignObject so it sits
-         INSIDE the SVG layer stack (above base sea, below clouds). -->
-    <foreignObject
-      x="0"
-      y="0"
-      width="1698"
-      height="835"
-      id="sea-canvas-host"
-      class="window-view__canvas"
-      pointer-events="none"
-    ></foreignObject>
-
-    <!-- Clouds container -->
-    <g id="cloud-layer"></g>
-
-    <!-- Islands + Lighthouse container -->
-    <g id="island-layer"></g>
-
-    <!-- Ocean layers container (kept for SVG render fallback) -->
+    <!-- Ocean SVG fallback layers (empty when canvas renderer is used) -->
     <g id="sea-layers"></g>
+  </svg>
+
+  <!-- Sea canvas host — plain HTML, sits between the back and front SVGs -->
+  <div id="sea-canvas-host" class="window-view__sea"></div>
+
+  <!-- Front SVG: clouds + islands + lighthouse -->
+  <svg
+    class="window-view__svg window-view__svg--front"
+    viewBox="0 0 1698 835"
+    preserveAspectRatio="xMidYMid slice"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <g id="cloud-layer"></g>
+    <g id="island-layer"></g>
   </svg>
 </div>
 
 <style>
   .window-view {
+    position: relative;
     width: 100%;
     height: 100%;
     display: block;
   }
 
+  /* Each SVG layer fills the slot and crops like the original single
+     SVG did (xMidYMid slice). */
   .window-view__svg {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     display: block;
     overflow: hidden;
   }
-
-  /* The foreignObject host for the sea canvas. Sized to the viewBox
-     so the canvas maps 1:1 onto the SVG coordinate system. */
-  .window-view__canvas {
-    width: 100%;
-    height: 100%;
+  .window-view__svg--back {
+    z-index: 1;
   }
-  .window-view__canvas canvas {
+
+  /* Sea canvas host: opaque HTML layer between back and front SVGs. */
+  .window-view__sea {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .window-view__sea canvas {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
+    object-fit: cover; /* same scale/crop as the SVGs' slice */
     display: block;
+    pointer-events: none;
+  }
+
+  .window-view__svg--front {
+    z-index: 3;
   }
 </style>
 

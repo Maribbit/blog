@@ -223,11 +223,15 @@ function buildOceanCanvas(
   const layers = buildLayers(seaTopY, config.viewWidth, config.viewHeight, C);
 
   /* Use the SVG viewBox dimensions for the internal canvas resolution,
-     so wave vertices fall on the same pixels the SVG would have. */
+     so wave vertices fall on the same pixels the SVG would have.
+     object-fit:cover maps the bitmap onto the slot with the exact same
+     scale/crop math as the sibling SVGs' preserveAspectRatio="slice",
+     keeping the sea aligned with clouds/islands. */
   const canvas = document.createElement('canvas');
   canvas.width = config.viewWidth;
   canvas.height = config.viewHeight;
-  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+  canvas.style.cssText =
+    'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;';
   container.appendChild(canvas);
   const ctx = canvas.getContext('2d')!;
   ctx.lineJoin = 'round';
