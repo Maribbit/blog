@@ -53,13 +53,26 @@
       fill="url(#BaseSeaGradient)"
     />
 
+    <!-- Canvas-based ocean: a single <canvas> replaces 21 SVG <path>
+         re-parses per frame. Hosted in a foreignObject so it sits
+         INSIDE the SVG layer stack (above base sea, below clouds). -->
+    <foreignObject
+      x="0"
+      y="0"
+      width="1698"
+      height="835"
+      id="sea-canvas-host"
+      class="window-view__canvas"
+      pointer-events="none"
+    ></foreignObject>
+
     <!-- Clouds container -->
     <g id="cloud-layer"></g>
 
     <!-- Islands + Lighthouse container -->
     <g id="island-layer"></g>
 
-    <!-- Ocean layers container -->
+    <!-- Ocean layers container (kept for SVG render fallback) -->
     <g id="sea-layers"></g>
   </svg>
 </div>
@@ -76,6 +89,18 @@
     height: 100%;
     display: block;
     overflow: hidden;
+  }
+
+  /* The foreignObject host for the sea canvas. Sized to the viewBox
+     so the canvas maps 1:1 onto the SVG coordinate system. */
+  .window-view__canvas {
+    width: 100%;
+    height: 100%;
+  }
+  .window-view__canvas canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 </style>
 
@@ -95,10 +120,10 @@
     seaTopY = vpYtoWindowViewY(geom.vpY, geom);
   } catch { /* stage not ready — use fallback */ }
 
-  /* ─── Build sea ─── */
-  const seaContainer = document.getElementById('sea-layers') as unknown as SVGGElement;
+  /* ─── Build sea (Canvas renderer, 1 layer instead of 21 SVG paths) ─── */
+  const seaContainer = document.getElementById('sea-canvas-host');
   const { animate: seaAnimate } = seaContainer
-    ? buildOcean(seaContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY })
+    ? buildOcean(seaContainer as unknown as HTMLElement, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY })
     : { animate: () => {} };
 
   /* ─── Build clouds (GPU-composited drift) ─── */

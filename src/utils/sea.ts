@@ -37,7 +37,7 @@ interface SeaPoint {
 }
 
 interface SeaLayer {
-  element: SVGPathElement;
+  element?: SVGPathElement;
   points: SeaPoint[];
   speed: number;
   baseRGB: [number, number, number];
@@ -46,15 +46,26 @@ interface SeaLayer {
 }
 
 /* ──────── Ocean builder ──────── */
+
+/* Canvas2D renderer — replaces 21 SVG <path> elements with a single
+   <canvas>. The per-frame cost drops from N path string-parses +
+   N fill/stroke sets to 1 setTransform + 1 fill + 1 stroke. */
 export function buildOcean(
-  container: SVGGElement,
+  container: SVGGElement | HTMLElement,
   config: SeaConfig,
 ): { layers: SeaLayer[]; animate: (time: number) => void } {
-  const seaTopY = config.seaTopY;
-  const CONFIG = {
-    /* Perf: fewer layers & wider steps ⇒ fewer <path> nodes and fewer
-       points updated per frame. (Safari/Firefox repaint SVG paths
-       slower than Chrome, so the mesh is tuned lean.) */
+  /* The buildOcean signature is shared between the SVG and Canvas
+     renderers. The legacy SVG path builder still exists for
+     <use> elsewhere; we just branch on container type here. */
+  if (container instanceof SVGGElement) {
+    return buildOceanSvg(container as SVGGElement, config);
+  }
+  return buildOceanCanvas(container as HTMLElement, config);
+}
+
+/* ──────── Shared CONFIG (used by both renderers) ──────── */
+function makeConfig() {
+  return {
     layersCount: 28,
     flatSeaRatio: 0.05,
     ampYFar: 0,
@@ -63,9 +74,6 @@ export function buildOcean(
     stepXNear: 155,
     perspectiveYExp: 2.2,
     perspectiveMeshExp: 2.0,
-    /* Color: near sea lifted so the near waves actually read —
-       previously every near strip clamped to the dark floor (lum 100)
-       and the wave bands were invisible. */
     colorFar: [172, 180, 186] as [number, number, number],
     colorNear: [138, 147, 155] as [number, number, number],
     colorMinClamp: [118, 128, 136] as [number, number, number],
@@ -84,62 +92,42 @@ export function buildOcean(
     shapeAnimSpeedX: 0.5,
     globalTimeSpeed: 0.02,
   };
+}
 
-  const layers: SeaLayer[] = [];
+/* Pre-computed layer data shared between SVG and Canvas paths. */
+function buildLayers(
+  seaTopY: number, viewWidth: number, viewHeight: number, C: ReturnType<typeof makeConfig>
+): Array<{
+  points: SeaPoint[];
+  speed: number;
+  baseRGB: [number, number, number];
+  colorPhase: number;
+  colorAnimAmp: number;
+}> {
+  const layers: Array<{
+    points: SeaPoint[]; speed: number;
+    baseRGB: [number, number, number];
+    colorPhase: number; colorAnimAmp: number;
+  }> = [];
+  for (let i = 0; i < C.layersCount; i++) {
+    const progress = i / (C.layersCount - 1);
+    const perspectiveY = Math.pow(progress, C.perspectiveYExp);
+    const perspectiveMorph = Math.pow(progress, C.perspectiveMeshExp);
+    if (perspectiveY < C.flatSeaRatio) continue;
 
-  /* Sync base sea gradient */
-  const baseSeaRect = document.getElementById('base-sea-rect');
-  if (baseSeaRect) {
-    baseSeaRect.setAttribute('y', String(seaTopY));
-    baseSeaRect.setAttribute('height', String(config.viewHeight - seaTopY));
-  }
-
-  /* Compute gradient stops using the FINAL seaTopY */
-  const firstPolyProgress = Math.pow(CONFIG.flatSeaRatio, 1 / CONFIG.perspectiveYExp);
-  const firstColorProgress = Math.pow(firstPolyProgress, CONFIG.colorPerspectiveExp);
-  const rBlend = Math.round(
-    CONFIG.colorFar[0] - firstColorProgress * (CONFIG.colorFar[0] - CONFIG.colorNear[0])
-  );
-  const gBlend = Math.round(
-    CONFIG.colorFar[1] - firstColorProgress * (CONFIG.colorFar[1] - CONFIG.colorNear[1])
-  );
-  const bBlend = Math.round(
-    CONFIG.colorFar[2] - firstColorProgress * (CONFIG.colorFar[2] - CONFIG.colorNear[2])
-  );
-  const gradStopFar = document.getElementById('grad-stop-far');
-  const gradStopMid = document.getElementById('grad-stop-mid');
-  const gradStopNear = document.getElementById('grad-stop-near');
-  if (gradStopFar)
-    gradStopFar.setAttribute('stop-color', `rgb(${CONFIG.colorFar.join(',')})`);
-  if (gradStopMid) {
-    gradStopMid.setAttribute('offset', `${CONFIG.flatSeaRatio * 100}%`);
-    gradStopMid.setAttribute('stop-color', `rgb(${rBlend},${gBlend},${bBlend})`);
-  }
-  if (gradStopNear)
-    gradStopNear.setAttribute('stop-color', `rgb(${CONFIG.colorNear.join(',')})`);
-
-  /* Build layers */
-  const svgNS = 'http://www.w3.org/2000/svg';
-  for (let i = 0; i < CONFIG.layersCount; i++) {
-    const progress = i / (CONFIG.layersCount - 1);
-    const perspectiveY = Math.pow(progress, CONFIG.perspectiveYExp);
-    const perspectiveMorph = Math.pow(progress, CONFIG.perspectiveMeshExp);
-    if (perspectiveY < CONFIG.flatSeaRatio) continue;
-
-    const baseY = seaTopY + perspectiveY * (config.viewHeight - seaTopY + 50);
-    const baseStepX = CONFIG.stepXFar - perspectiveMorph * (CONFIG.stepXFar - CONFIG.stepXNear);
+    const baseY = seaTopY + perspectiveY * (viewHeight - seaTopY + 50);
+    const baseStepX = C.stepXFar - perspectiveMorph * (C.stepXFar - C.stepXNear);
     const layerSpeed = 0.2 + Math.random() * 0.4;
-    const currentAmpY = CONFIG.ampYFar + perspectiveMorph * (CONFIG.ampYNear - CONFIG.ampYFar);
-    const currentAnimAmpX = CONFIG.shapeAnimAmpXFar + perspectiveMorph * (CONFIG.shapeAnimAmpXNear - CONFIG.shapeAnimAmpXFar);
-    const currentColorAnimAmp = CONFIG.colorAnimAmpFar + perspectiveMorph * (CONFIG.colorAnimAmpNear - CONFIG.colorAnimAmpFar);
+    const currentAmpY = C.ampYFar + perspectiveMorph * (C.ampYNear - C.ampYFar);
+    const currentAnimAmpX = C.shapeAnimAmpXFar + perspectiveMorph * (C.shapeAnimAmpXNear - C.shapeAnimAmpXFar);
+    const currentColorAnimAmp = C.colorAnimAmpFar + perspectiveMorph * (C.colorAnimAmpNear - C.colorAnimAmpFar);
 
     const points: SeaPoint[] = [];
     let currentX = -300;
-    while (currentX < config.viewWidth + 300) {
+    while (currentX < viewWidth + 300) {
       const stepX = baseStepX * (0.6 + Math.random() * 0.8);
       points.push({
-        baseX: currentX,
-        baseY,
+        baseX: currentX, baseY,
         phaseY: currentX * 0.005 + progress * 20 + Math.random() * 3,
         phaseX: currentX * 0.01 + progress * 10 + Math.random() * 5,
         ampY: currentAmpY * (0.7 + Math.random() * 0.5),
@@ -148,36 +136,53 @@ export function buildOcean(
       currentX += stepX;
     }
 
-    /* Color */
-    const colorProgress = Math.pow(progress, CONFIG.colorPerspectiveExp);
-    const rBase = CONFIG.colorFar[0] - colorProgress * (CONFIG.colorFar[0] - CONFIG.colorNear[0]);
-    const gBase = CONFIG.colorFar[1] - colorProgress * (CONFIG.colorFar[1] - CONFIG.colorNear[1]);
-    const bBase = CONFIG.colorFar[2] - colorProgress * (CONFIG.colorFar[2] - CONFIG.colorNear[2]);
-    const currentVariance = CONFIG.varianceFar + Math.pow(progress, 1.2) * (CONFIG.varianceNear - CONFIG.varianceFar);
-    const currentPeakShift = CONFIG.colorPeakShift * Math.pow(progress, 0.5);
+    const colorProgress = Math.pow(progress, C.colorPerspectiveExp);
+    const rBase = C.colorFar[0] - colorProgress * (C.colorFar[0] - C.colorNear[0]);
+    const gBase = C.colorFar[1] - colorProgress * (C.colorFar[1] - C.colorNear[1]);
+    const bBase = C.colorFar[2] - colorProgress * (C.colorFar[2] - C.colorNear[2]);
+    const currentVariance = C.varianceFar + Math.pow(progress, 1.2) * (C.varianceNear - C.varianceFar);
+    const currentPeakShift = C.colorPeakShift * Math.pow(progress, 0.5);
     const rawGaussian = gaussianRandom();
-    const adjustedRandom = rawGaussian * CONFIG.colorSpread + currentPeakShift;
+    const adjustedRandom = rawGaussian * C.colorSpread + currentPeakShift;
     let lightOffset = adjustedRandom * currentVariance;
-    const altShift = (i % 2 === 0 ? CONFIG.layerAltShift : -CONFIG.layerAltShift) * progress;
+    const altShift = (i % 2 === 0 ? C.layerAltShift : -C.layerAltShift) * progress;
     lightOffset += altShift;
     const initR = Math.round(rBase + lightOffset);
     const initG = Math.round(gBase + lightOffset);
     const initB = Math.round(bBase + lightOffset);
     const layerColorPhase = Math.random() * Math.PI * 2;
 
-    const pathEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
-    pathEl.setAttribute('stroke-width', '1.5');
-    pathEl.setAttribute('stroke-linejoin', 'round');
-    container.appendChild(pathEl);
     layers.push({
-      element: pathEl, points, speed: layerSpeed,
+      points, speed: layerSpeed,
       baseRGB: [initR, initG, initB],
       colorPhase: layerColorPhase,
       colorAnimAmp: currentColorAnimAmp,
     });
   }
+  return layers;
+}
 
-  /* ──── Animation tick ──── */
+/* ──────── Legacy SVG renderer (kept for completeness) ──────── */
+function buildOceanSvg(
+  container: SVGGElement,
+  config: SeaConfig,
+): { layers: SeaLayer[]; animate: (time: number) => void } {
+  const seaTopY = config.seaTopY;
+  const C = makeConfig();
+  const baseSeaRect = document.getElementById('base-sea-rect');
+  if (baseSeaRect) {
+    baseSeaRect.setAttribute('y', String(seaTopY));
+    baseSeaRect.setAttribute('height', String(config.viewHeight - seaTopY));
+  }
+  const layers: SeaLayer[] = buildLayers(seaTopY, config.viewWidth, config.viewHeight, C) as SeaLayer[];
+  const svgNS = 'http://www.w3.org/2000/svg';
+  for (let i = 0; i < layers.length; i++) {
+    const pathEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
+    pathEl.setAttribute('stroke-width', '1.5');
+    pathEl.setAttribute('stroke-linejoin', 'round');
+    container.appendChild(pathEl);
+    (layers[i] as any).element = pathEl;
+  }
   function animate(time: number): void {
     for (const layer of layers) {
       let d = `M -300 ${config.viewHeight} L -300 ${layer.points[0].baseY} `;
@@ -186,25 +191,108 @@ export function buildOcean(
         const waveY1 = Math.sin(pt.phaseY + layerTime);
         const waveY2 = 0.2 * Math.cos(pt.phaseY * 1.5 - layerTime * 0.6);
         const currentY = pt.baseY + (waveY1 + waveY2) * pt.ampY;
-        const waveX = Math.sin(pt.phaseX + layerTime * CONFIG.shapeAnimSpeedX);
+        const waveX = Math.sin(pt.phaseX + layerTime * C.shapeAnimSpeedX);
         const currentX = pt.baseX + waveX * pt.ampX;
         d += `L ${currentX} ${currentY} `;
       }
       d += `L ${config.viewWidth + 300} ${config.viewHeight} Z`;
-      layer.element.setAttribute('d', d);
+      (layer as any).element.setAttribute('d', d);
 
-      const colorWave = Math.sin(time * CONFIG.colorAnimSpeed + layer.colorPhase);
+      const colorWave = Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
       const dynamicOffset = colorWave * layer.colorAnimAmp;
-      const finalR = Math.max(CONFIG.colorMinClamp[0], Math.min(255, Math.round(layer.baseRGB[0] + dynamicOffset)));
-      const finalG = Math.max(CONFIG.colorMinClamp[1], Math.min(255, Math.round(layer.baseRGB[1] + dynamicOffset)));
-      const finalB = Math.max(CONFIG.colorMinClamp[2], Math.min(255, Math.round(layer.baseRGB[2] + dynamicOffset)));
-      const strokeR = Math.min(255, finalR + CONFIG.strokeHighlight);
-      const strokeG = Math.min(255, finalG + CONFIG.strokeHighlight);
-      const strokeB = Math.min(255, finalB + CONFIG.strokeHighlight);
-      layer.element.setAttribute('fill', `rgb(${finalR},${finalG},${finalB})`);
-      layer.element.setAttribute('stroke', `rgb(${strokeR},${strokeG},${strokeB})`);
+      const finalR = Math.max(C.colorMinClamp[0], Math.min(255, Math.round(layer.baseRGB[0] + dynamicOffset)));
+      const finalG = Math.max(C.colorMinClamp[1], Math.min(255, Math.round(layer.baseRGB[1] + dynamicOffset)));
+      const finalB = Math.max(C.colorMinClamp[2], Math.min(255, Math.round(layer.baseRGB[2] + dynamicOffset)));
+      const strokeR = Math.min(255, finalR + C.strokeHighlight);
+      const strokeG = Math.min(255, finalG + C.strokeHighlight);
+      const strokeB = Math.min(255, finalB + C.strokeHighlight);
+      (layer as any).element.setAttribute('fill', `rgb(${finalR},${finalG},${finalB})`);
+      (layer as any).element.setAttribute('stroke', `rgb(${strokeR},${strokeG},${strokeB})`);
     }
   }
+  return { layers, animate };
+}
 
+/* ──────── Canvas2D renderer (default, perf-critical path) ──────── */
+function buildOceanCanvas(
+  container: HTMLElement,
+  config: SeaConfig,
+): { layers: SeaLayer[]; animate: (time: number) => void } {
+  const seaTopY = config.seaTopY;
+  const C = makeConfig();
+  const layers = buildLayers(seaTopY, config.viewWidth, config.viewHeight, C);
+
+  /* Use the SVG viewBox dimensions for the internal canvas resolution,
+     so wave vertices fall on the same pixels the SVG would have. */
+  const canvas = document.createElement('canvas');
+  canvas.width = config.viewWidth;
+  canvas.height = config.viewHeight;
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+  container.appendChild(canvas);
+  const ctx = canvas.getContext('2d')!;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 1.5;
+
+  /* ── Sky gradient (matches the SVG SkyGradient: #d5d7db → #e6e6e6).
+     The canvas sits above the SVG sky rect, so it must repaint the sky
+     itself. IMPORTANT: the canvas inside <foreignObject> composites its
+     transparent pixels as BLACK (foreignObject is its own layer), so
+     we must paint an opaque background every frame — never clearRect. */
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, config.viewHeight);
+  skyGradient.addColorStop(0, '#d5d7db');
+  skyGradient.addColorStop(1, '#e6e6e6');
+
+  /* ── Far-sea static gradient (same stops as the SVG BaseSeaGradient:
+     colorFar @ 0% → blend @ 5% → colorNear @ 100%). */
+  const seaGradient = ctx.createLinearGradient(0, seaTopY, 0, config.viewHeight);
+  const firstPolyProgress = Math.pow(C.flatSeaRatio, 1 / C.perspectiveYExp);
+  const firstColorProgress = Math.pow(firstPolyProgress, C.colorPerspectiveExp);
+  const blend = (a: number, b: number) => Math.round(a - firstColorProgress * (a - b));
+  seaGradient.addColorStop(0, `rgb(${C.colorFar[0]},${C.colorFar[1]},${C.colorFar[2]})`);
+  seaGradient.addColorStop(
+    C.flatSeaRatio,
+    `rgb(${blend(C.colorFar[0], C.colorNear[0])},${blend(C.colorFar[1], C.colorNear[1])},${blend(C.colorFar[2], C.colorNear[2])})`
+  );
+  seaGradient.addColorStop(1, `rgb(${C.colorNear[0]},${C.colorNear[1]},${C.colorNear[2]})`);
+
+  function animate(time: number): void {
+    /* Opaque sky gradient above the horizon — matches the SVG sky and
+       prevents transparent pixels from showing through as black. */
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, 0, config.viewWidth, seaTopY);
+    /* Far-sea gradient base (drawn first, under the wave bands). */
+    ctx.fillStyle = seaGradient;
+    ctx.fillRect(0, seaTopY, config.viewWidth, config.viewHeight - seaTopY);
+    /* Far-sea gradient base (drawn first, under the wave bands). */
+    ctx.fillStyle = seaGradient;
+    ctx.fillRect(0, seaTopY, config.viewWidth, config.viewHeight - seaTopY);
+
+    for (const layer of layers) {
+      const layerTime = time * layer.speed;
+      ctx.beginPath();
+      ctx.moveTo(-300, config.viewHeight);
+      ctx.lineTo(-300, layer.points[0].baseY);
+      for (const pt of layer.points) {
+        const waveY1 = Math.sin(pt.phaseY + layerTime);
+        const waveY2 = 0.2 * Math.cos(pt.phaseY * 1.5 - layerTime * 0.6);
+        const y = pt.baseY + (waveY1 + waveY2) * pt.ampY;
+        const waveX = Math.sin(pt.phaseX + layerTime * C.shapeAnimSpeedX);
+        const x = pt.baseX + waveX * pt.ampX;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(config.viewWidth + 300, config.viewHeight);
+      ctx.closePath();
+
+      const colorWave = Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
+      const dy = colorWave * layer.colorAnimAmp;
+      const r = Math.max(C.colorMinClamp[0], Math.min(255, Math.round(layer.baseRGB[0] + dy)));
+      const g = Math.max(C.colorMinClamp[1], Math.min(255, Math.round(layer.baseRGB[1] + dy)));
+      const b = Math.max(C.colorMinClamp[2], Math.min(255, Math.round(layer.baseRGB[2] + dy)));
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgb(${Math.min(255, r + C.strokeHighlight)},${Math.min(255, g + C.strokeHighlight)},${Math.min(255, b + C.strokeHighlight)})`;
+      ctx.stroke();
+    }
+  }
   return { layers, animate };
 }
