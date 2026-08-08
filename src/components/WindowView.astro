@@ -72,6 +72,7 @@
     xmlns="http://www.w3.org/2000/svg"
   >
     <g id="cloud-layer"></g>
+    <g id="ship-layer"></g>
     <g id="island-layer"></g>
   </svg>
 </div>
@@ -125,6 +126,7 @@
   import { buildOcean } from '../utils/sea';
   import { buildClouds } from '../utils/clouds';
   import { buildIslands } from '../utils/islands';
+  import { buildShips } from '../utils/ships';
 
   const VIEW_W = 1698;
   const VIEW_H = 835;
@@ -154,6 +156,12 @@
     buildIslands(islandContainer, { viewWidth: VIEW_W, viewHeight: VIEW_H, seaTopY });
   }
 
+  /* ─── Build distant ships ─── */
+  const shipContainer = document.getElementById('ship-layer') as unknown as SVGGElement;
+  const { update: shipUpdate } = shipContainer
+    ? buildShips(shipContainer, { viewWidth: VIEW_W })
+    : { update: () => {} };
+
   /* ─── Shared animation loop ─── */
   import { register } from '../utils/animation-loop';
   let time = 0;
@@ -161,5 +169,6 @@
     time += 0.02;
     seaAnimate(time);
     cloudUpdate();
+    shipUpdate(time);
   });
 </script>
