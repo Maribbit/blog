@@ -1,14 +1,15 @@
 ---
 // Desk — SVG <path> faces generated at runtime by JS.
 //
-// 14 faces: 5 top, 5 front, 4 extension (full-width forward platform).
+// 12 faces: 3 top, 3 front, 4 extension + 1 ext-top.
 // viewBox 100×100, preserveAspectRatio="none".
 //
 // Geometry (viewBox y):
 //   0─17  : upper-left / upper-right top faces
-//   0─33  : left / right ramps
-//   17─100: front faces (vertical drops)
-//   33─49 : extension platform (full-width, perspective-widened)
+//   0─33  : lower-mid tray top face (recessed, steps down at x=30 & x=70)
+//   17─100: front-left / front-right faces (upper wings)
+//   33─100: front-mid face (tray, wider — includes vertical step faces)
+//   33─49 : extension platform top (full-width, perspective-widened)
 //   49─100: extension front face
 //
 // z-index 25 (above character 20) so desk occludes the lower body.
@@ -107,17 +108,27 @@ import Notebook from './Notebook.astro';
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = desk.querySelector('svg')!;
 
-    /* Perspective narrow fractions */
+    /* Perspective narrow fractions.
+       NF narrows horizontal from y=17 to y=0.
+       stepNf foreshortens the step wall's rear vertical: it reaches
+       a DIFFERENT y than the surrounding tray rear edge (which stays
+       at y=17).  The step wall bottom-rear and tray rear-corner both
+       move to the foreshortened Y — zero gaps, 近大远小. */
     const nf  = narrowFrac(g.deskY17 - g.vpY, g.deskTopY - g.vpY);
-    const nmf = narrowFrac(g.deskY33 - g.vpY, g.deskY17 - g.vpY);
     const extNf = narrowFrac(g.deskY49 - g.vpY, g.deskY33 - g.vpY);
     const fullWiden = 50 * extNf / (1 - extNf);
-    const NF = nf, NMF = nmf, FW = fullWiden;
+    const NF = nf, FW = fullWiden;
+
+    /* Depth midpoint of the front vertical (y=17→33) vs rear (y=0→17) */
+    const frontMid = (g.deskY17 + g.deskY33) * 0.5;
+    const rearMid  = (g.deskTopY + g.deskY17) * 0.5;
+    const stepNf = narrowFrac(frontMid - g.vpY, rearMid - g.vpY);
+    const rearDrop = 16 * (1 - stepNf);  // < 16, rear shorter
+    const stRY = rearDrop;               // rear vertical: y=0 → y=stRY
 
     /* Color map */
     const C = {
       top:      '#d2d9da',
-      ramp:     '#bfcbcc',
       front:    '#a8b5b6',
       extTop:   '#d2d9da',
       extFront: '#a8b5b6',
@@ -127,33 +138,33 @@ import Notebook from './Notebook.astro';
        adjacent faces (~0.24px at 1200px desk width). */
     const E = 0.02;
 
-    /* Tray front x-boundary (ramp inner edge). Lower value ⇒ steeper
-       ramps + wider lower-middle tray. Was 38 → 36. */
-    const TR = 36;
-
     /* definition: { id, d, fill } */
     const faceDefs = [
       /* ─── Top faces (bottom edges pushed down by E) ─── */
       { id: 'df-upper-left', fill: C.top,
         d: `M ${50*NF} 0 L ${30+20*NF} 0 L 30 ${17+E} L 0 ${17+E} Z` },
-      { id: 'df-left-ramp', fill: C.ramp,
-        d: `M ${30+20*NF} 0 L ${TR+(50-TR)*NMF} ${17+E} L ${TR} ${33+E} L 30 ${17+E} Z` },
+      /* Tray — rear corners foreshortened to stRY so the step wall's
+         rear vertical (0→stRY) is shorter than the front (17→33). */
       { id: 'df-lower-mid', fill: C.top,
-        d: `M ${TR} ${33+E} L ${100-TR} ${33+E} L ${100-TR-(50-TR)*NMF} ${17+E} L ${TR+(50-TR)*NMF} ${17+E} Z` },
-      { id: 'df-right-ramp', fill: C.ramp,
-        d: `M ${100-TR-(50-TR)*NMF} ${17+E} L ${70-20*NF} 0 L 70 ${17+E} L ${100-TR} ${33+E} Z` },
+        d: `M 30 ${33+E} L 70 ${33+E} L ${70-20*NF} ${stRY+E} L ${30+20*NF} ${stRY+E} Z` },
       { id: 'df-upper-right', fill: C.top,
         d: `M ${70-20*NF} 0 L ${100-50*NF} 0 L 100 ${17+E} L 70 ${17+E} Z` },
+
+      /* ─── Step walls — rear vertical 0→stRY (shorter), front 17→33.
+         Top follows the wing diagonal; bottom matches the tray corner. */
+      { id: 'df-step-left', fill: C.front,
+        d: `M ${30+20*NF} 0 L 30 ${17+E} L 30 33 L ${30+20*NF} ${stRY+E} Z` },
+      { id: 'df-step-right', fill: C.front,
+        d: `M ${70-20*NF} 0 L 70 ${17+E} L 70 33 L ${70-20*NF} ${stRY+E} Z` },
 
       /* ─── Front faces (top edges pushed up by E) ─── */
       { id: 'df-front-left', fill: C.front,
         d: `M 0 ${17-E} L 30 ${17-E} L 30 100 L 0 100 Z` },
-      { id: 'df-front-left-ramp', fill: C.front,
-        d: `M 30 ${17-E} L ${TR} ${33-E} L ${TR} 100 L 30 100 Z` },
+      /* Tray front — x=30..70, top at y=33 (the recessed tray level).
+         The steps (x=30 & x=70) are vertical walls, so from straight-on
+         1-point perspective the front is one continuous face. */
       { id: 'df-front-mid', fill: C.front,
-        d: `M ${TR} ${33-E} L ${100-TR} ${33-E} L ${100-TR} 100 L ${TR} 100 Z` },
-      { id: 'df-front-right-ramp', fill: C.front,
-        d: `M ${100-TR} ${33-E} L 70 ${17-E} L 70 100 L ${100-TR} 100 Z` },
+        d: `M 30 ${33-E} L 70 ${33-E} L 70 100 L 30 100 Z` },
       { id: 'df-front-right', fill: C.front,
         d: `M 70 ${17-E} L 100 ${17-E} L 100 100 L 70 100 Z` },
 

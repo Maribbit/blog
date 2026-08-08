@@ -163,11 +163,14 @@ import Desk from '../components/Desk.astro';
 
     - char-h scales with viewport HEIGHT so the window always fits with
       a small top margin. No cap — scene always fills vertically.
-    - Stage width: max(100%, win-w × 1.8). The desk is 1.4 × win-w and
+    - Stage width: max(100%, win-w × 1.8). The desk is 1.15 × win-w and
       is the widest object on stage. The extension platform adds ~7%
-      perspective overhang each side, so 1.8× gives ~20% breathing room
-      On narrow viewports the stage is wider than the room and .room
-      scrolls horizontally — the wall extends past the visible area.
+      perspective overhang each side. On 1920+ wide screens the visible
+      breathing room (viewport − desk) is fully on-screen with a small
+      scroll range; on very wide screens the stage caps at the viewport
+      width. On narrow viewports the stage is wider than the room and
+      .room scrolls horizontally — the wall extends past the visible
+      area.
     - Stage is centered with margin: 0 auto so the character is centered
       on wide viewports too (where there's no scroll overflow to push
       it back into the middle).
@@ -181,11 +184,11 @@ import Desk from '../components/Desk.astro';
       window-to-char ratio 1.55 × 964/1786 ≈ 0.8366
       vertical span        win-h/char-h + wrist-from-bottom
                            = 0.8366 + 0.4975 = 1.3341
-      desk width           1.4 × win-w
+      desk width           1.15 × win-w
       vp horizon           computed per perspective.ts from sill ratio
   */
   .room {
-    --win-top-margin: 64px;
+    --win-top-margin: 104px;
     --char-h: calc((100dvh - var(--win-top-margin)) / 1.3341);
     --char-w: calc(var(--char-h) * 453 / 1380);
     --char-wrist-from-bottom: 0.4975;
@@ -194,11 +197,14 @@ import Desk from '../components/Desk.astro';
     --win-w: var(--win-scale);
     --win-h: calc(var(--win-scale) * 964 / 1786);
 
-    /* Desk is wider than the window (1.4×win-w), so the stage must
+    /* Desk is wider than the window (1.15×win-w), so the stage must
        be at least that wide. The extension platform adds ~7% visible
-       overhang on each side (perspective widening), so use a 1.8×
-       multiplier to ensure the full desk is scrollable into view. */
-    --desk-w: calc(var(--win-w) * 1.4);
+       overhang on each side (perspective widening). 1.8× keeps the
+       desk centered with visible breathing room on 1920+ screens: the
+       visible gutter is set by (viewport − desk) once the stage is
+       wider than the viewport, and on very wide screens max() caps
+       the stage at 100%. */
+    --desk-w: calc(var(--win-w) * 1.15);
     --stage-w: max(100%, calc(var(--win-w) * 1.8));
 
     /* Scene scale: 1cm in CSS pixels, derived from the character's
