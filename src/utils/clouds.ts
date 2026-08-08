@@ -13,6 +13,8 @@
  *   5. Bottom face: kite (4-point rhombus) with stable random params
  */
 
+import { seededRng, range, intRange, wrap, generation } from './world';
+
 /* ──────── Types ──────── */
 interface CloudPt {
   rx: number;
@@ -20,17 +22,19 @@ interface CloudPt {
 }
 
 interface CloudData {
+  idx: number;
   group: SVGGElement;
   topEl: SVGPathElement;
   bottomEl: SVGPathElement;
-  x: number;
+  x0: number;        // raw offset within the loop span at t=0
   width: number;
-  baseY: number;
+  baseY: number;     // vertical position, re-rolled per generation
   pts: CloudPt[];
-  speed: number;
-  /* Stable bottom-face geometry (computed once, not per-frame random) */
-  bOffset: number;  // horizontal spread of bottom kite
-  bThick: number;   // vertical depth of bottom kite
+  speed: number;     // viewBox units per second
+  span: number;      // loop span: viewWidth + width + 2×margin
+  bOffset: number;   // horizontal spread of bottom kite
+  bThick: number;    // vertical depth of bottom kite
+  lastGen: number;   // last loop generation rendered
 }
 
 interface CloudConfig {
@@ -43,22 +47,25 @@ const CLOUD_COLORS = {
   bottom: '#d4d6d9',
 };
 
-/* ──────── Spec generation ──────── */
-function generateCloudSpec(config: CloudConfig) {
-  const aspect = 0.66 + Math.random() * 0.5;
-  const width = 80 + Math.random() * 220;
-  const maxHeight = width * aspect * (0.15 + Math.random() * 0.2);
-  const depth = maxHeight * (0.1 + Math.random() * 0.1); /* 10–20 % of height */
-  const baseY = 50 + Math.random() * 350;
-  const x = -width + Math.random() * (config.viewWidth + width * 2);
-  const bOffset = width * (0.04 + Math.random() * 0.06);
-  const bThick = depth * (0.6 + Math.random() * 0.6);
-  return { width, x, baseY, maxHeight, depth, bOffset, bThick };
+/* Fixed world seed — never change, or clouds reshape on refresh. */
+const WORLD_SEED = 'maribbit-sea-clouds';
+const MARGIN = 50;   // off-screen margin on each side
+
+/* ──────── Spec generation (seeded) ──────── */
+function generateCloudSpec(config: CloudConfig, rng: () => number) {
+  const aspect = 0.66 + rng() * 0.5;
+  const width = 80 + rng() * 220;
+  const maxHeight = width * aspect * (0.15 + rng() * 0.2);
+  const depth = maxHeight * (0.1 + rng() * 0.1); /* 10–20 % of height */
+  const baseY = 50 + rng() * 350;
+  const bOffset = width * (0.04 + rng() * 0.06);
+  const bThick = depth * (0.6 + rng() * 0.6);
+  return { width, baseY, maxHeight, depth, bOffset, bThick };
 }
 
-/* ──────── Point generation ──────── */
-function makeCloudPoints(width: number, maxHeight: number): CloudPt[] {
-  const n = 5 + Math.floor(Math.random() * 4);  // 5–8 points
+/* ──────── Point generation (seeded) ──────── */
+function makeCloudPoints(width: number, maxHeight: number, rng: () => number): CloudPt[] {
+  const n = 5 + intRange(rng, 0, 3);  // 5–8 points
   const pts: CloudPt[] = [];
   /* First and last points at 18% and 82% of width — far enough from
      edges so the side diagonals aren't steep. */
@@ -69,14 +76,14 @@ function makeCloudPoints(width: number, maxHeight: number): CloudPt[] {
     const progress = i / (n - 1);
     /* Evenly spaced base, then jitter by ±15% of the segment width */
     const baseX = margin + progress * usableW;
-    const jitter = (Math.random() - 0.5) * usableW / n * 0.6;
+    const jitter = (rng() - 0.5) * usableW / n * 0.6;
     const rx = Math.max(margin, Math.min(width - margin, baseX + jitter));
 
     /* Bell-curve height: edges at 50% of center height so clouds
        don't look like flat-brimmed straw hats. */
     const centered = Math.abs(progress - 0.5) * 2;
     const hFactor = 1 - centered * 0.5;
-    const noise = 0.55 + Math.random() * 0.5;
+    const noise = 0.55 + rng() * 0.5;
     pts.push({ rx, ry: -(maxHeight * hFactor * noise) });
   }
 
@@ -145,15 +152,19 @@ function makeBottomPath(
 export function buildClouds(
   container: SVGGElement,
   config: CloudConfig,
-): { update: () => void } {
+): { update: (time: number) => void } {
   const svgNS = 'http://www.w3.org/2000/svg';
   const clouds: CloudData[] = [];
-  const nClouds = 4 + Math.floor(Math.random() * 3);
+  const nClouds = 4 + intRange(seededRng(WORLD_SEED, 0), 0, 2);
 
   for (let i = 0; i < nClouds; i++) {
-    const spec = generateCloudSpec(config);
-    const pts = makeCloudPoints(spec.width, spec.maxHeight);
-    const speed = 0.15 + Math.random() * 0.35;
+    const rng = seededRng(WORLD_SEED, i + 1);
+    const spec = generateCloudSpec(config, rng);
+    const pts = makeCloudPoints(spec.width, spec.maxHeight, rng);
+    const speed = range(rng, 9, 30);   // viewBox units / second
+    const span = config.viewWidth + spec.width + MARGIN * 2;
+    const x0 = range(rng, 0, span);    // raw offset within span at t=0
+
     const group = document.createElementNS(svgNS, 'g') as SVGGElement;
     const topEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
     const bottomEl = document.createElementNS(svgNS, 'path') as SVGPathElement;
@@ -177,32 +188,35 @@ export function buildClouds(
     container.appendChild(group);
     /* Local coords: x starts at 0; the group transform carries the
        absolute position. */
-    group.style.transform = `translateX(${spec.x}px)`;
+    group.style.transform = `translateX(${wrap(x0, span) - spec.width - MARGIN}px)`;
     clouds.push({
-      group, topEl, bottomEl,
-      x: spec.x, width: spec.width, baseY: spec.baseY,
-      pts, speed,
+      idx: i, group, topEl, bottomEl,
+      x0, width: spec.width, baseY: spec.baseY,
+      pts, speed, span,
       bOffset: spec.bOffset, bThick: spec.bThick,
+      lastGen: 0,
     });
   }
 
-  function update(): void {
+  /* Position is a PURE FUNCTION of world time (ms): refresh the page
+     and each cloud is exactly where it should be, mid-crossing or not. */
+  function update(time: number): void {
+    const t = time / 1000; // seconds
     for (const c of clouds) {
-      c.x += c.speed;
-      if (c.x > config.viewWidth + 50) {
-        c.x = -c.width - 50 - Math.random() * 100;
-        const spec = generateCloudSpec(config);
-        c.width = spec.width;
-        c.baseY = spec.baseY;
-        c.bOffset = spec.bOffset;
-        c.bThick = spec.bThick;
-        c.pts = makeCloudPoints(spec.width, spec.maxHeight);
-        c.speed = 0.15 + Math.random() * 0.35;
-        /* Only on wrap do we rebuild paths (local coords, x = 0). */
-        c.topEl.setAttribute('d', makeTopPath(0, c.baseY, c.width, c.pts));
-        c.bottomEl.setAttribute('d', makeBottomPath(0, c.baseY, c.width, c.bOffset, c.bThick, c.pts));
+      const raw = c.x0 + c.speed * t;
+      const gen = generation(raw, c.span);
+      /* On each new loop, re-roll the vertical position — deterministic
+         via the generation salt, so it never changes on refresh. */
+      if (gen !== c.lastGen) {
+        const rng = seededRng(WORLD_SEED, c.idx * 1000 + gen + 1);
+        const baseY = 50 + range(rng, 0, 350);
+        c.baseY = baseY;
+        c.topEl.setAttribute('d', makeTopPath(0, baseY, c.width, c.pts));
+        c.bottomEl.setAttribute('d', makeBottomPath(0, baseY, c.width, c.bOffset, c.bThick, c.pts));
+        c.lastGen = gen;
       }
-      c.group.style.transform = `translateX(${c.x}px)`;
+      const x = wrap(raw, c.span) - c.width - MARGIN;
+      c.group.style.transform = `translateX(${x}px)`;
     }
   }
 

@@ -10,10 +10,15 @@
  * All viewBox numbers are tuned for 1698×835 (the window glass).
  */
 
+import { seededRng } from './world';
+
+/* Fixed world seed — never change, or the sea mesh re-rolls. */
+const SEA_SEED = 'maribbit-sea-waves';
+
 /* ──────── Helpers ──────── */
-function gaussianRandom(): number {
+function gaussianRandom(rng: () => number): number {
   let rand = 0;
-  for (let i = 0; i < 6; i++) rand += Math.random();
+  for (let i = 0; i < 6; i++) rand += rng();
   return (rand - 3) / 3;
 }
 
@@ -94,9 +99,12 @@ function makeConfig() {
   };
 }
 
-/* Pre-computed layer data shared between SVG and Canvas paths. */
+/* Pre-computed layer data shared between SVG and Canvas paths.
+   All randomness comes from a fixed seeded PRNG, so the wave mesh
+   is identical on every page load. */
 function buildLayers(
-  seaTopY: number, viewWidth: number, viewHeight: number, C: ReturnType<typeof makeConfig>
+  seaTopY: number, viewWidth: number, viewHeight: number, C: ReturnType<typeof makeConfig>,
+  rng: () => number = seededRng(SEA_SEED, 0),
 ): Array<{
   points: SeaPoint[];
   speed: number;
@@ -117,7 +125,7 @@ function buildLayers(
 
     const baseY = seaTopY + perspectiveY * (viewHeight - seaTopY + 50);
     const baseStepX = C.stepXFar - perspectiveMorph * (C.stepXFar - C.stepXNear);
-    const layerSpeed = 0.2 + Math.random() * 0.4;
+    const layerSpeed = 0.2 + rng() * 0.4;
     const currentAmpY = C.ampYFar + perspectiveMorph * (C.ampYNear - C.ampYFar);
     const currentAnimAmpX = C.shapeAnimAmpXFar + perspectiveMorph * (C.shapeAnimAmpXNear - C.shapeAnimAmpXFar);
     const currentColorAnimAmp = C.colorAnimAmpFar + perspectiveMorph * (C.colorAnimAmpNear - C.colorAnimAmpFar);
@@ -125,13 +133,13 @@ function buildLayers(
     const points: SeaPoint[] = [];
     let currentX = -300;
     while (currentX < viewWidth + 300) {
-      const stepX = baseStepX * (0.6 + Math.random() * 0.8);
+      const stepX = baseStepX * (0.6 + rng() * 0.8);
       points.push({
         baseX: currentX, baseY,
-        phaseY: currentX * 0.005 + progress * 20 + Math.random() * 3,
-        phaseX: currentX * 0.01 + progress * 10 + Math.random() * 5,
-        ampY: currentAmpY * (0.7 + Math.random() * 0.5),
-        ampX: currentAnimAmpX * (0.5 + Math.random() * 1.0),
+        phaseY: currentX * 0.005 + progress * 20 + rng() * 3,
+        phaseX: currentX * 0.01 + progress * 10 + rng() * 5,
+        ampY: currentAmpY * (0.7 + rng() * 0.5),
+        ampX: currentAnimAmpX * (0.5 + rng() * 1.0),
       });
       currentX += stepX;
     }
@@ -142,7 +150,7 @@ function buildLayers(
     const bBase = C.colorFar[2] - colorProgress * (C.colorFar[2] - C.colorNear[2]);
     const currentVariance = C.varianceFar + Math.pow(progress, 1.2) * (C.varianceNear - C.varianceFar);
     const currentPeakShift = C.colorPeakShift * Math.pow(progress, 0.5);
-    const rawGaussian = gaussianRandom();
+    const rawGaussian = gaussianRandom(rng);
     const adjustedRandom = rawGaussian * C.colorSpread + currentPeakShift;
     let lightOffset = adjustedRandom * currentVariance;
     const altShift = (i % 2 === 0 ? C.layerAltShift : -C.layerAltShift) * progress;
@@ -150,7 +158,7 @@ function buildLayers(
     const initR = Math.round(rBase + lightOffset);
     const initG = Math.round(gBase + lightOffset);
     const initB = Math.round(bBase + lightOffset);
-    const layerColorPhase = Math.random() * Math.PI * 2;
+    const layerColorPhase = rng() * Math.PI * 2;
 
     layers.push({
       points, speed: layerSpeed,

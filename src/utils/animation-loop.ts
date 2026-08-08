@@ -8,7 +8,7 @@
  * import { register } from '../utils/animation-loop';
  *
  * const unregister = register((time, delta) => {
- *   // time ≈ performance.now() at frame start
+ *   // time ≈ world time (ms since WORLD_EPOCH) at frame start
  *   // delta ≈ ms since last frame (~16 at 60fps)
  *   updateMyAnimation(time, delta);
  * });
@@ -16,7 +16,16 @@
  * // later, to stop:
  * unregister();
  * ```
+ *
+ * ## Time source
+ *
+ * The `time` argument is the WORLD CLOCK (see utils/world.ts), not
+ * performance.now(). Every callback therefore receives a deterministic
+ * value: refresh the page and the world resumes exactly where it was,
+ * even across the idle-gate pauses below.
  */
+
+import { worldNow } from './world';
 
 /* ──────── Types ──────── */
 type TickFn = (time: number, delta: number) => void;
@@ -36,8 +45,9 @@ function frame(now: number): void {
   if (!running) return;
   const delta = lastTime ? now - lastTime : 16;
   lastTime = now;
+  const w = worldNow();
   for (const e of entries) {
-    e.fn(now, delta);
+    e.fn(w, delta);
   }
   requestAnimationFrame(frame);
 }

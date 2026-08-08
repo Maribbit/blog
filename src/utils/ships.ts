@@ -14,13 +14,21 @@
  * | height      | SVG viewBox height (pixels)         |
  * | scale       | target size in WindowView viewBox   |
  * | y           | viewBox Y of the SVG's top-left     |
- * | speed       | viewBox units per rAF tick          |
- * | startDelay  | seconds before first appearance     |
+ * | speed       | viewBox units per second            |
+ * | cycleSec    | seconds per full crossing           |
+ *
+ * ## Determinism (world clock)
+ *
+ * Position is a pure function of world time: `x = wrap(x0 + speed·t)`.
+ * Refresh mid-crossing and the ship is exactly where it should be.
+ * The ship TYPE is hashed per crossing generation: each pass can pick
+ * a different variant from the manifest, deterministically.
  *
  * WindowView viewBox: 1698 × 835, horizon at seaTopY (~622).
  */
 
 import cargoShipSvg from '../assets/svg/scene/Cargo_Ship_Faraway.svg?raw';
+import { seededRng, range, hashMod } from './world';
 
 /* ═════════════════════════════════════════════════════════════════
    Ship manifest — the ONLY place ship behaviour is configured.
@@ -28,13 +36,10 @@ import cargoShipSvg from '../assets/svg/scene/Cargo_Ship_Faraway.svg?raw';
    ═════════════════════════════════════════════════════════════════ */
 
 interface ShipDef {
-  svg: string;       // raw SVG (imported via ?raw)
+  svg: string;   // raw SVG (imported via ?raw)
   width: number;
   height: number;
-  scale: number;
-  y: number;
-  speed: number;
-  startDelay: number; // seconds
+  scale: number; // target size in WindowView viewBox
 }
 
 const SHIP_MANIFEST: ShipDef[] = [
@@ -43,9 +48,6 @@ const SHIP_MANIFEST: ShipDef[] = [
     width: 259,
     height: 70,
     scale: 0.77,
-    y: 575,
-    speed: 0.12,
-    startDelay: 0,
   },
   /* ── Future ships (examples) ──────────────────────────────
   {
@@ -53,11 +55,33 @@ const SHIP_MANIFEST: ShipDef[] = [
     width: 180,
     height: 45,
     scale: 0.6,
-    y: 595,
-    speed: 0.08,
-    startDelay: 8,   // appears 8 s after load
   },
   */
+];
+
+/* Crossing behaviour — which lane each ship uses. */
+interface ShipLane {
+  /** Which manifest entry the FIRST crossing shows. */
+  firstType: number;
+  y: number;
+  speed: number;      // viewBox units / second
+  cycleSec: number;   // seconds per full crossing (loops)
+  /** Time offset (s) before the first appearance. */
+  delaySec: number;
+}
+
+/* Fixed world seed — never change, or ships re-roll on refresh. */
+const WORLD_SEED = 'maribbit-sea-ships';
+const MARGIN = 60;
+
+const SHIP_LANES: ShipLane[] = [
+  {
+    firstType: 0,
+    y: 575,
+    speed: 7.2,       // ≈ 0.12/帧 × 60
+    cycleSec: 300,    // 5 min per crossing
+    delaySec: 0,
+  },
 ];
 
 /* ═════════════════════════════════════════════════════════════════
@@ -68,38 +92,88 @@ interface RuntimeConfig {
   viewWidth: number;
 }
 
+interface ShipEntry {
+  lane: ShipLane;
+  def: ShipDef;
+  g: SVGGElement;
+  x0: number;         // raw offset at t=0 (ms)
+  lastGen: number;
+  lastDef: ShipDef;
+}
+
 export function buildShips(
   container: SVGGElement,
   config: RuntimeConfig,
 ): { update: (time: number) => void } {
   const { viewWidth } = config;
-  const entries: { g: SVGGElement; def: ShipDef; x: number }[] = [];
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const entries: ShipEntry[] = [];
 
-  for (const def of SHIP_MANIFEST) {
-    /* Parse the raw SVG into DOM nodes */
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(def.svg, 'image/svg+xml');
-    const srcG = doc.querySelector('g')!;
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    while (srcG.firstChild) g.appendChild(srcG.firstChild);
+  for (let laneIdx = 0; laneIdx < SHIP_LANES.length; laneIdx++) {
+    const lane = SHIP_LANES[laneIdx];
+    /* First type is deterministic; span uses that type's width. */
+    const def = SHIP_MANIFEST[lane.firstType % SHIP_MANIFEST.length];
+    const span = viewWidth + def.width * def.scale + MARGIN * 2;
+    const g = document.createElementNS(svgNS, 'g') as SVGGElement;
     container.appendChild(g);
 
-    const shipW = def.width * def.scale;
-    /* Start off-screen left, delayed by startDelay seconds */
-    const startX = -shipW;
-    g.setAttribute('transform', `translate(${startX}, ${def.y}) scale(${def.scale})`);
+    /* Raw offset at t=0 — deterministic lane phase, so ships are
+       spaced apart and never all clustered. */
+    const rng = seededRng(WORLD_SEED, laneIdx + 1);
+    const x0 = range(rng, 0, span) - lane.delaySec * lane.speed;
+    const gen = Math.floor(x0 / span); // could be -1 if delay pushed raw negative
 
-    entries.push({ g, def, x: startX + def.speed * def.startDelay * 50 /* rough tick→s */ });
+    entries.push({
+      lane, def, g,
+      x0, lastGen: gen - 1,
+      lastDef: def,
+    });
+    paintShip(entries[entries.length - 1], viewWidth);
   }
 
+  /* Deterministic: which type is sailing this generation? */
+  function typeForGen(lane: ShipLane, gen: number): ShipDef {
+    return SHIP_MANIFEST[hashMod(`${WORLD_SEED}:${laneIdxOf(lane)}:${gen}`, SHIP_MANIFEST.length)];
+  }
+
+  function laneIdxOf(lane: ShipLane): number {
+    return SHIP_LANES.indexOf(lane);
+  }
+
+  function paintShip(e: ShipEntry, vw: number): void {
+    /* Replace children with the current def's shapes */
+    while (e.g.firstChild) e.g.removeChild(e.g.firstChild);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(e.def.svg, 'image/svg+xml');
+    const srcG = doc.querySelector('g')!;
+    while (srcG.firstChild) e.g.appendChild(srcG.firstChild);
+    const span = vw + e.def.width * e.def.scale + MARGIN * 2;
+    e.g.setAttribute('transform', `translate(${-e.def.width * e.def.scale - MARGIN}, ${e.lane.y}) scale(${e.def.scale})`);
+    void span;
+  }
+
+  /* Position is a PURE FUNCTION of world time (ms). */
   function update(time: number): void {
+    const t = time / 1000; // seconds
     for (const e of entries) {
-      e.x += e.def.speed;
-      const shipW = e.def.width * e.def.scale;
-      if (e.x > viewWidth + 20) {
-        e.x = -shipW - 40;
+      const lane = e.lane;
+      const span = viewWidth + e.def.width * e.def.scale + MARGIN * 2;
+      const raw = e.x0 + lane.speed * t;
+      const gen = Math.floor(raw / span);
+
+      /* Type change at a new generation — deterministic hash. */
+      if (gen !== e.lastGen) {
+        const next = typeForGen(lane, gen);
+        if (next !== e.lastDef) {
+          e.def = next;
+          e.lastDef = next;
+          paintShip(e, viewWidth);
+        }
+        e.lastGen = gen;
       }
-      e.g.setAttribute('transform', `translate(${e.x}, ${e.def.y}) scale(${e.def.scale})`);
+
+      const x = (raw % span + span) % span - e.def.width * e.def.scale - MARGIN;
+      e.g.setAttribute('transform', `translate(${x}, ${lane.y}) scale(${e.def.scale})`);
     }
   }
 

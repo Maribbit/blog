@@ -162,13 +162,14 @@
     ? buildShips(shipContainer, { viewWidth: VIEW_W })
     : { update: () => {} };
 
-  /* ─── Shared animation loop ─── */
+  /* ─── Shared animation loop — world-clock time (ms) ───
+     Every callback receives the same deterministic world time, so
+     clouds/ships/sea all resume exactly where they were on refresh. */
   import { register } from '../utils/animation-loop';
-  let time = 0;
-  register(() => {
-    time += 0.02;
-    seaAnimate(time);
-    cloudUpdate();
-    shipUpdate(time);
+  register((timeMs) => {
+    /* Sea animates at its historical rate (0.02/frame ≈ 1.2/s). */
+    seaAnimate((timeMs / 1000) * 1.2);
+    cloudUpdate(timeMs);
+    shipUpdate(timeMs);
   });
 </script>
