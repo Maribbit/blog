@@ -275,9 +275,6 @@ function buildOceanCanvas(
     /* Far-sea gradient base (drawn first, under the wave bands). */
     ctx.fillStyle = seaGradient;
     ctx.fillRect(0, seaTopY, config.viewWidth, config.viewHeight - seaTopY);
-    /* Far-sea gradient base (drawn first, under the wave bands). */
-    ctx.fillStyle = seaGradient;
-    ctx.fillRect(0, seaTopY, config.viewWidth, config.viewHeight - seaTopY);
 
     for (const layer of layers) {
       const layerTime = time * layer.speed;
