@@ -28,7 +28,7 @@
  */
 
 import cargoShipSvg from '../assets/svg/scene/Cargo_Ship_Faraway.svg?raw';
-import { seededRng, range, hashMod } from './world';
+import { hashMod } from './world';
 
 /* ═════════════════════════════════════════════════════════════════
    Ship manifest — the ONLY place ship behaviour is configured.
@@ -59,15 +59,15 @@ const SHIP_MANIFEST: ShipDef[] = [
   */
 ];
 
-/* Crossing behaviour — which lane each ship uses. */
+/* Crossing behaviour — which lane each ship uses.
+   Time-bucket model: the world clock is sliced into buckets of
+   cycleSec; each bucket deterministically decides whether a ship
+   sails (presencePct), which type it is, and when it appears. */
 interface ShipLane {
-  /** Which manifest entry the FIRST crossing shows. */
-  firstType: number;
-  y: number;
-  speed: number;      // viewBox units / second
-  cycleSec: number;   // seconds per full crossing (loops)
-  /** Time offset (s) before the first appearance. */
-  delaySec: number;
+  y: number;           // viewBox Y of the ship's top-left
+  cycleSec: number;    // bucket length (s) — how often a new chance occurs
+  presencePct: number; // 0–100: chance a bucket actually has a ship
+  crossingSec: number; // time for a full left→right crossing (s)
 }
 
 /* Fixed world seed — never change, or ships re-roll on refresh. */
@@ -76,11 +76,13 @@ const MARGIN = 60;
 
 const SHIP_LANES: ShipLane[] = [
   {
-    firstType: 0,
     y: 575,
-    speed: 7.2,       // ≈ 0.12/帧 × 60
-    cycleSec: 300,    // 5 min per crossing
-    delaySec: 0,
+    /* Cargo ships are rare — a 25-min bucket, ~55% presence, and a
+       SLOW ~6.7 u/s crossing (300s across ~2018 units ≈ 5 min).
+       Long quiet stretches between sailings. */
+    cycleSec: 1500,   // 25 min
+    presencePct: 55,
+    crossingSec: 300,
   },
 ];
 
@@ -94,11 +96,10 @@ interface RuntimeConfig {
 
 interface ShipEntry {
   lane: ShipLane;
+  laneIdx: number;
   def: ShipDef;
   g: SVGGElement;
-  x0: number;         // raw offset at t=0 (ms)
-  lastGen: number;
-  lastDef: ShipDef;
+  visible: boolean;
 }
 
 export function buildShips(
@@ -111,33 +112,18 @@ export function buildShips(
 
   for (let laneIdx = 0; laneIdx < SHIP_LANES.length; laneIdx++) {
     const lane = SHIP_LANES[laneIdx];
-    /* First type is deterministic; span uses that type's width. */
-    const def = SHIP_MANIFEST[lane.firstType % SHIP_MANIFEST.length];
-    const span = viewWidth + def.width * def.scale + MARGIN * 2;
+    const def = typeForBucket(laneIdx, 0);
     const g = document.createElementNS(svgNS, 'g') as SVGGElement;
     container.appendChild(g);
 
-    /* Raw offset at t=0 — deterministic lane phase, so ships are
-       spaced apart and never all clustered. */
-    const rng = seededRng(WORLD_SEED, laneIdx + 1);
-    const x0 = range(rng, 0, span) - lane.delaySec * lane.speed;
-    const gen = Math.floor(x0 / span); // could be -1 if delay pushed raw negative
-
-    entries.push({
-      lane, def, g,
-      x0, lastGen: gen - 1,
-      lastDef: def,
-    });
+    entries.push({ lane, laneIdx, def, g, visible: false });
     paintShip(entries[entries.length - 1], viewWidth);
+    g.setAttribute('visibility', 'hidden');
   }
 
-  /* Deterministic: which type is sailing this generation? */
-  function typeForGen(lane: ShipLane, gen: number): ShipDef {
-    return SHIP_MANIFEST[hashMod(`${WORLD_SEED}:${laneIdxOf(lane)}:${gen}`, SHIP_MANIFEST.length)];
-  }
-
-  function laneIdxOf(lane: ShipLane): number {
-    return SHIP_LANES.indexOf(lane);
+  /* Deterministic: which type sails in a given bucket? */
+  function typeForBucket(laneIdx: number, bucket: number): ShipDef {
+    return SHIP_MANIFEST[hashMod(`${WORLD_SEED}:${laneIdx}:${bucket}`, SHIP_MANIFEST.length)];
   }
 
   function paintShip(e: ShipEntry, vw: number): void {
@@ -147,33 +133,47 @@ export function buildShips(
     const doc = parser.parseFromString(e.def.svg, 'image/svg+xml');
     const srcG = doc.querySelector('g')!;
     while (srcG.firstChild) e.g.appendChild(srcG.firstChild);
-    const span = vw + e.def.width * e.def.scale + MARGIN * 2;
-    e.g.setAttribute('transform', `translate(${-e.def.width * e.def.scale - MARGIN}, ${e.lane.y}) scale(${e.def.scale})`);
-    void span;
   }
 
-  /* Position is a PURE FUNCTION of world time (ms). */
+  /* Position is a PURE FUNCTION of world time (ms). Time-bucket
+     model: rare, intermittent appearances. */
   function update(time: number): void {
     const t = time / 1000; // seconds
     for (const e of entries) {
       const lane = e.lane;
       const span = viewWidth + e.def.width * e.def.scale + MARGIN * 2;
-      const raw = e.x0 + lane.speed * t;
-      const gen = Math.floor(raw / span);
+      const bucket = Math.floor(t / lane.cycleSec);
+      const bucketT = t - bucket * lane.cycleSec;
 
-      /* Type change at a new generation — deterministic hash. */
-      if (gen !== e.lastGen) {
-        const next = typeForGen(lane, gen);
-        if (next !== e.lastDef) {
-          e.def = next;
-          e.lastDef = next;
-          paintShip(e, viewWidth);
-        }
-        e.lastGen = gen;
+      /* Type for this bucket — swap at bucket boundary. */
+      const def = typeForBucket(e.laneIdx, bucket);
+      if (def !== e.def) {
+        e.def = def;
+        paintShip(e, viewWidth);
       }
 
-      const x = (raw % span + span) % span - e.def.width * e.def.scale - MARGIN;
-      e.g.setAttribute('transform', `translate(${x}, ${lane.y}) scale(${e.def.scale})`);
+      /* Presence + appearance time within the bucket. The appear
+         offset is hashed so it never shifts on refresh. */
+      const present = hashMod(`${WORLD_SEED}:${e.laneIdx}:${bucket}`, 100) < lane.presencePct;
+      const maxStart = Math.max(0, lane.cycleSec - lane.crossingSec);
+      const appearT = present
+        ? (hashMod(`${WORLD_SEED}:${e.laneIdx}:${bucket}:t`, 1000) / 1000) * maxStart
+        : 0;
+
+      const visible = present && bucketT >= appearT && bucketT < appearT + lane.crossingSec;
+
+      if (visible) {
+        const progress = (bucketT - appearT) / lane.crossingSec;
+        const x = -e.def.width * e.def.scale - MARGIN + progress * span;
+        e.g.setAttribute('transform', `translate(${x}, ${lane.y}) scale(${e.def.scale})`);
+        if (!e.visible) {
+          e.visible = true;
+          e.g.setAttribute('visibility', 'visible');
+        }
+      } else if (e.visible) {
+        e.visible = false;
+        e.g.setAttribute('visibility', 'hidden');
+      }
     }
   }
 

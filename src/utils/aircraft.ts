@@ -49,7 +49,7 @@
  */
 
 import floatplaneSvg from '../assets/svg/scene/Floatplane.svg?raw';
-import { seededRng, range } from './world';
+import { hashMod } from './world';
 
 /* ═════════════════════════════════════════════════════════════════
    Aircraft manifest — the ONLY place aircraft behaviour is configured.
@@ -136,12 +136,16 @@ const AIRCRAFT_MANIFEST: AircraftDef[] = [
 ];
 
 /* ── Flight lanes ─────────────────────────────────────────────────
-   Each lane is one flight path across the sky. */
+   Each lane is one flight path across the sky.  Time-bucket model:
+   the world clock is sliced into buckets; each bucket deterministically
+   decides whether a plane flies (presencePct), when it appears, and
+   which type it is.  Sightseeing planes appear frequently — the
+   crossing itself is short, but a new chance comes every few minutes. */
 interface AircraftLane {
-  y: number;        // viewBox Y of the plane's top-left
-  speed: number;    // viewBox units / second
-  cycleSec: number; // seconds per full crossing (loops)
-  delaySec: number; // time offset before first appearance
+  y: number;           // viewBox Y of the plane's top-left
+  cycleSec: number;    // bucket length (s)
+  presencePct: number; // 0–100: chance a bucket has a plane
+  crossingSec: number; // time for a full crossing (s)
 }
 
 /* Fixed world seed — never change, or planes re-roll on refresh. */
@@ -151,9 +155,11 @@ const MARGIN = 80;
 const AIRCRAFT_LANES: AircraftLane[] = [
   {
     y: 300,       // high in the sky, well above the horizon (~622)
-    speed: 60,    // ≈ 30s per crossing — planes move fast
-    cycleSec: 35,
-    delaySec: 0,
+    /* Frequent, semi-random sightseeing traffic: 4-min buckets,
+       ~85% presence, 30s crossing. */
+    cycleSec: 240,   // 4 min
+    presencePct: 85,
+    crossingSec: 30,
   },
 ];
 
@@ -167,6 +173,7 @@ interface RuntimeConfig {
 
 interface AircraftEntry {
   lane: AircraftLane;
+  laneIdx: number;
   def: AircraftDef;
   g: SVGGElement;
   blade: SVGPathElement | null;   // propeller blade (double-bladed)
@@ -179,7 +186,7 @@ interface AircraftEntry {
   frontWin: SVGPathElement | null;// front window (nose)
   frontWing: SVGPathElement | null; // Wings_Front (V silhouette)
   wingR: SVGPathElement | null;   // Wing_R_Bottom (near wing bottom)
-  x0: number;                     // raw offset at t=0
+  visible: boolean;
 }
 
 function spinBlade(
@@ -213,8 +220,8 @@ export function buildAircraft(
 
   for (let laneIdx = 0; laneIdx < AIRCRAFT_LANES.length; laneIdx++) {
     const lane = AIRCRAFT_LANES[laneIdx];
-    const def = AIRCRAFT_MANIFEST[0];
-    const span = viewWidth + def.width * def.scale + MARGIN * 2;
+    /* Deterministic type for this lane (manifest may grow later). */
+    const def = AIRCRAFT_MANIFEST[hashMod(`${WORLD_SEED}:${laneIdx}:${0}`, AIRCRAFT_MANIFEST.length)];
     const g = document.createElementNS(svgNS, 'g') as SVGGElement;
     container.appendChild(g);
 
@@ -255,32 +262,53 @@ export function buildAircraft(
     const frontWing = pick('#Wings_Front');
     const wingR = pick('#Wing_R_Bottom');
 
-    /* Deterministic start offset — planes are spaced by the seed. */
-    const rng = seededRng(WORLD_SEED, laneIdx + 1);
-    const x0 = range(rng, 0, span) - lane.delaySec * lane.speed;
-
     entries.push({
-      lane, def, g,
+      lane, laneIdx, def, g,
       blade,
       floatL, floatR,
       strutsL, strutsR,
       rearWin, sideWin, frontWin,
       frontWing, wingR,
-      x0,
+      visible: false,
     });
+    g.setAttribute('visibility', 'hidden');
     if (!blade) {
       console.warn('[aircraft] #Propeller not found in', def.svg.slice(0, 40));
     }
   }
 
-  /* Position + blade angle are PURE FUNCTIONS of world time (ms). */
+  /* Position + blade angle are PURE FUNCTIONS of world time (ms).
+     Time-bucket model: frequent, semi-random appearances. */
   function update(time: number): void {
     const t = time / 1000; // seconds
     for (const e of entries) {
       const lane = e.lane;
       const span = viewWidth + e.def.width * e.def.scale + MARGIN * 2;
-      const raw = e.x0 + lane.speed * t;
-      const x = ((raw % span) + span) % span - e.def.width * e.def.scale - MARGIN;
+      const bucket = Math.floor(t / lane.cycleSec);
+      const bucketT = t - bucket * lane.cycleSec;
+
+      /* Presence + appearance time within this bucket (deterministic). */
+      const present = hashMod(`${WORLD_SEED}:${e.laneIdx}:${bucket}`, 100) < lane.presencePct;
+      const maxStart = Math.max(0, lane.cycleSec - lane.crossingSec);
+      const appearT = present
+        ? (hashMod(`${WORLD_SEED}:${e.laneIdx}:${bucket}:t`, 1000) / 1000) * maxStart
+        : 0;
+      const visible = present && bucketT >= appearT && bucketT < appearT + lane.crossingSec;
+
+      if (!visible) {
+        if (e.visible) {
+          e.visible = false;
+          e.g.setAttribute('visibility', 'hidden');
+        }
+        continue;
+      }
+      if (!e.visible) {
+        e.visible = true;
+        e.g.setAttribute('visibility', 'visible');
+      }
+
+      const progress = (bucketT - appearT) / lane.crossingSec;
+      const x = -e.def.width * e.def.scale - MARGIN + progress * span;
       /* Plane transform: position + slight clockwise pitch (nose dips).
          Rotate about the fuselage center so the pitch reads natural. */
       const cx = (e.def.width * e.def.scale) / 2;
