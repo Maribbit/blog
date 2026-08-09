@@ -1,0 +1,213 @@
+---
+// Codex (图鉴) — the notebook's collection of ships & aircraft.
+//
+// Rendered statically from the manifest at build time: no search, no
+// filters, no client JS — just a grid of cards. Rarity reflects how
+// often each visitor appears in the world-clock schedule.
+import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
+---
+
+<div class="paper paper--codex" id="codex-view" data-open="false" aria-hidden="true">
+  <div class="paper__veil paper__veil--codex" aria-hidden="true"></div>
+
+  <div class="paper__scroll" id="codex-scroll" tabindex="-1">
+    <div class="paper__codex-container">
+      <div class="paper__codex-grid">
+        {CODEX_ENTRIES.map((e) => (
+          <article class="paper__codex-card">
+            <div class="paper__codex-card-media">
+              <span
+                class={`paper__codex-badge paper__codex-badge--${e.rarity}`}
+                aria-hidden="true"
+              >{CODEX_RARITY_LABELS[e.rarity]}</span>
+              <Fragment set:html={e.svg} />
+            </div>
+            <div class="paper__codex-card-body">
+              <h3 class="paper__codex-card-name">{e.name}</h3>
+              <span class="paper__codex-card-en">{e.nameEn}</span>
+              <p class="paper__codex-card-desc">{e.desc}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed bottom footer — full-width bar, title + close centered.
+       Acts like a phone's bottom nav: always in reach, cards scroll
+       freely above it. -->
+  <footer class="paper__codex-footer">
+    <div class="paper__codex-footer-inner">
+      <div class="paper__codex-footer-title">
+        <span class="paper__label">Codex · 图鉴</span>
+        <h2 class="paper__title" id="codex-title">窗外的图鉴</h2>
+      </div>
+      <button class="paper__close" type="button" data-close aria-label="关闭">
+        <span class="paper__x" aria-hidden="true"></span>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<style>
+  .paper--codex {
+    display: none;
+  }
+  .paper--codex[data-open='true'] {
+    display: flex;
+    flex-direction: column;
+  }
+  .paper__veil--codex {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+    background:
+      radial-gradient(
+        ellipse 80% 70% at 50% 40%,
+        rgba(237, 241, 242, 0.78) 0%,
+        rgba(237, 241, 242, 0.42) 55%,
+        rgba(237, 241, 242, 0.12) 100%
+      );
+    -webkit-backdrop-filter: blur(14px) saturate(108%);
+    backdrop-filter: blur(14px) saturate(108%);
+  }
+  .paper__codex-container {
+    position: relative;
+    width: min(880px, 94%);
+    /* margin: auto centers in the flex scroll; collapses to 0 when
+       the content overflows, so the sheet scrolls from the top.
+       Generous bottom padding keeps the last cards clear of the
+       fixed bottom dock. */
+    margin: auto;
+    padding: 2.4rem 0 7rem;
+  }
+
+  /* ──────────── Bottom footer (full-width, title + close centered) ── */
+  /* Fixed to the viewport bottom edge — the scroll layer only covers
+     the area above it, so cards scroll behind cleanly. */
+  .paper__codex-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--paper-edge);
+    background: rgba(237, 241, 242, 0.78);
+    -webkit-backdrop-filter: blur(18px) saturate(112%);
+    backdrop-filter: blur(18px) saturate(112%);
+  }
+  .paper__codex-footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  .paper__codex-footer-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.05rem;
+    line-height: 1.2;
+  }
+  .paper__codex-footer .paper__title {
+    font-size: 0.92rem;
+  }
+  .paper__codex-footer .paper__label {
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+  }
+  .paper__codex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 0.9rem;
+  }
+  .paper__codex-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--paper-edge);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.42);
+    -webkit-backdrop-filter: blur(8px) saturate(108%);
+    backdrop-filter: blur(8px) saturate(108%);
+    box-shadow: 0 1px 2px rgba(45, 51, 56, 0.04);
+    overflow: hidden;
+    animation: paper-card-in 0.22s var(--paper-ease);
+  }
+  .paper__codex-card-media {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 104px;
+    padding: 0.9rem 1rem;
+    background: linear-gradient(180deg, #e9ebed 0%, #dfe4e6 60%, #d2d9db 100%);
+  }
+  /* The SVG is injected via set:html, so it has no scope attr */
+  .paper__codex-card-media :global(svg) {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .paper__codex-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .paper__codex-badge--common {
+    background: rgba(45, 51, 56, 0.08);
+    color: var(--color-text-dim);
+  }
+  .paper__codex-badge--rare {
+    background: rgba(148, 35, 31, 0.12);
+    color: var(--color-accent);
+  }
+  .paper__codex-card-body {
+    padding: 0.7rem 0.85rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+  .paper__codex-card-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-text);
+    margin: 0;
+  }
+  .paper__codex-card-en {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    color: var(--color-text-dim);
+  }
+  .paper__codex-card-desc {
+    margin: 0.3rem 0 0;
+    font-size: 0.74rem;
+    line-height: 1.65;
+    color: var(--paper-ink);
+  }
+
+  /* Compact footer on small screens */
+  @media (max-width: 640px) {
+    .paper__codex-footer {
+      padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
+    }
+    .paper__codex-footer-inner {
+      gap: 0.7rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .paper__codex-card {
+      animation: none;
+    }
+  }
+</style>
