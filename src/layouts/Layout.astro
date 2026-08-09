@@ -62,9 +62,11 @@ const pageUrl = SITE + Astro.url.pathname;
     <script is:inline>
       /* Live-ticking clock favicon.
          Draws the same hexagonal clock as the wall clock onto a small
-         canvas once per second and swaps it into <link id="favicon">,
-         so the browser tab shows the real time. Falls back gracefully
-         to the static favicon.svg when canvas isn't available. */
+         canvas once per minute and swaps it into <link id="favicon">,
+         so the browser tab shows the time. Falls back gracefully to the
+         static favicon.svg when canvas isn't available. No second hand,
+         and repaints are aligned to the minute boundary so the canvas
+         only redraws when the time actually changes. */
       (function () {
         var link = document.getElementById('favicon');
         if (!link) return;
@@ -113,13 +115,11 @@ const pageUrl = SITE + Astro.url.pathname;
           for (var i = 0; i < 4; i++) tickMark((i * TAU) / 4);
 
           var now = new Date();
-          var s = now.getSeconds();
-          var m = now.getMinutes() + s / 60;
+          var m = now.getMinutes();
           var h = (now.getHours() % 12) + m / 60;
 
           hand((h / 12) * TAU, 11, 3.4, '#2d3338');
           hand((m / 60) * TAU, 16, 2.4, '#2d3338');
-          hand((s / 60) * TAU, 19, 1.3, '#94231f');
 
           ctx.save();
           ctx.translate(CX, CY);
@@ -132,8 +132,13 @@ const pageUrl = SITE + Astro.url.pathname;
           link.href = c.toDataURL('image/png');
         }
 
+        // Draw now, then align future repaints to the minute boundary so
+        // the favicon only redraws when the time actually changes.
         draw();
-        setInterval(draw, 1000);
+        setTimeout(function align() {
+          draw();
+          setInterval(draw, 60000);
+        }, 60000 - (Date.now() % 60000));
       })();
     </script>
   </body>
