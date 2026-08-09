@@ -248,6 +248,13 @@ import Desk from '../components/Desk.astro';
     cursor: pointer;
   }
 
+  /* Hide the top scroll bar while an overlay (about / music / codex)
+     is open — it would otherwise float above the overlay's sheet. */
+  body[data-overlay='open'] .scroll-bar {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .scroll-bar__inner {
     position: relative;
     width: 100%;

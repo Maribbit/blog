@@ -176,6 +176,9 @@ import CodexView from './CodexView.astro';
       if (open) el.removeAttribute('inert');
       else el.setAttribute('inert', '');
     }
+    /* While any overlay is open, tell the room to hide its top scroll
+       bar (index.astro keys off body[data-overlay]). */
+    document.body.dataset.overlay = active ? 'open' : 'closed';
   }
 
   /* Remember which element opened the current view, so we can return
