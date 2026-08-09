@@ -72,6 +72,7 @@
     xmlns="http://www.w3.org/2000/svg"
   >
     <g id="cloud-layer"></g>
+    <g id="aircraft-layer"></g>
     <g id="ship-layer"></g>
     <g id="island-layer"></g>
   </svg>
@@ -127,6 +128,7 @@
   import { buildClouds } from '../utils/clouds';
   import { buildIslands } from '../utils/islands';
   import { buildShips } from '../utils/ships';
+  import { buildAircraft } from '../utils/aircraft';
 
   const VIEW_W = 1698;
   const VIEW_H = 835;
@@ -162,6 +164,12 @@
     ? buildShips(shipContainer, { viewWidth: VIEW_W })
     : { update: () => {} };
 
+  /* ─── Build distant aircraft (sky, fast, spinning prop) ─── */
+  const aircraftContainer = document.getElementById('aircraft-layer') as unknown as SVGGElement;
+  const { update: aircraftUpdate } = aircraftContainer
+    ? buildAircraft(aircraftContainer, { viewWidth: VIEW_W })
+    : { update: () => {} };
+
   /* ─── Shared animation loop — world-clock time (ms) ───
      Every callback receives the same deterministic world time, so
      clouds/ships/sea all resume exactly where they were on refresh. */
@@ -170,6 +178,7 @@
     /* Sea animates at its historical rate (0.02/frame ≈ 1.2/s). */
     seaAnimate((timeMs / 1000) * 1.2);
     cloudUpdate(timeMs);
+    aircraftUpdate(timeMs);
     shipUpdate(timeMs);
   });
 </script>

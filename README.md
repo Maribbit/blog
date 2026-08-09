@@ -32,6 +32,18 @@ This project is **dual-licensed**:
 
 ## Technologies Used ｜ 核心技术
 
+These aspects were considered in the selection and implementation of this project:
+
+- **Low bundle size**: Minimize JavaScript size to ensure fast loading and performance.
+- **Low dependencies**: Minimize external dependencies to reduce maintenance costs and potential security risks.
+- **High-performance rendering**: Use GPU-accelerated rendering methods whenever possible to ensure smooth animations.
+
+本项目的选型与实现主要考虑几个方面：
+
+- **低打包体积**：尽可能减少 JavaScript 体积，保证博客加载速度和性能。
+- **低依赖**：尽量减少外部依赖，降低维护成本和潜在的安全风险。
+- **高性能渲染**：尽可能使用 GPU 加速的渲染方式，保证动画流畅。
+
 ### Astro
 
 I like its concept of "islands architecture" and its ability to generate static sites with minimal JavaScript.
@@ -39,6 +51,10 @@ I like its concept of "islands architecture" and its ability to generate static 
 我喜欢 Astro 的“岛屿架构”概念，以及它生成静态站点时对 JavaScript 的最小化依赖。
 
 ## Coding Tools ｜ 编程工具
+
+Graphic programming is really challenging at the code level. The challenge is not the usual engineering problems, but simulating real-world physical and biological phenomena with numbers. So I hardly wrote any code myself, mainly relying on AI to implement it.
+
+图形编程在代码层面真的很有难度。它的挑战不是通常的工程问题，而是用数字模拟现实世界的物理和生物现象。所以我自己几乎没写代码，主要依赖 AI 来实现。
 
 ### GitHub Copilot in VS Code
 
@@ -57,9 +73,3 @@ This is currently my main programming model. It is very cheap and powerful enoug
 This is my main design model. It is reasonably priced and performs well in image understanding and generation. I will have it help me design complex image elements such as characters and scenes.
 
 这是我的主力设计模型。它价格合理，且在图像理解和生成方面表现出色。我会让它帮我设计人物、场景等复杂的图像元素。
-
-### MiniMax M3
-
-This is my current auxiliary programming model. I use it mainly because it can read images directly. It is more expensive than DeepSeek V4 Flash, but its coding ability is relatively weaker.
-
-这是我目前的辅助编程模型。使用它只是因为它可以直接阅读图片。它价格比 DeepSeek V4 Flash 贵，但代码能力反而较差。
