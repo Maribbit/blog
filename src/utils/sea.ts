@@ -48,6 +48,9 @@ interface SeaLayer {
   baseRGB: [number, number, number];
   colorPhase: number;
   colorAnimAmp: number;
+  /** Static anchor ribbon: fixed wave shape + fixed color (a time=0
+      snapshot). Interleaved with the animated layers to calm the sea. */
+  isStatic: boolean;
 }
 
 /* ──────── Ocean builder ──────── */
@@ -74,7 +77,7 @@ function makeConfig() {
     layersCount: 28,
     flatSeaRatio: 0.05,
     ampYFar: 0,
-    ampYNear: 58,
+    ampYNear: 30,
     stepXFar: 250,
     stepXNear: 155,
     perspectiveYExp: 2.2,
@@ -84,10 +87,10 @@ function makeConfig() {
     colorMinClamp: [118, 128, 136] as [number, number, number],
     colorPerspectiveExp: 2.5,
     varianceFar: 2,
-    varianceNear: 170,
+    varianceNear: 110,
     colorPeakShift: -0.15,
     colorSpread: 0.5,
-    layerAltShift: 15,
+    layerAltShift: 10,
     strokeHighlight: 6,
     colorAnimAmpFar: 0.5,
     colorAnimAmpNear: 32,
@@ -111,11 +114,13 @@ function buildLayers(
   baseRGB: [number, number, number];
   colorPhase: number;
   colorAnimAmp: number;
+  isStatic: boolean;
 }> {
   const layers: Array<{
     points: SeaPoint[]; speed: number;
     baseRGB: [number, number, number];
     colorPhase: number; colorAnimAmp: number;
+    isStatic: boolean;
   }> = [];
   for (let i = 0; i < C.layersCount; i++) {
     const progress = i / (C.layersCount - 1);
@@ -165,6 +170,9 @@ function buildLayers(
       baseRGB: [initR, initG, initB],
       colorPhase: layerColorPhase,
       colorAnimAmp: currentColorAnimAmp,
+      /* Every 3rd ribbon is static — a fixed wave + fixed color anchor
+         interleaved with the moving ones, so the sea reads calmer. */
+      isStatic: i % 3 === 2,
     });
   }
   return layers;
@@ -194,8 +202,10 @@ function buildOceanSvg(
   function animate(time: number): void {
     for (const layer of layers) {
       let d = `M -300 ${config.viewHeight} L -300 ${layer.points[0].baseY} `;
+      /* Static ribbons use the time=0 snapshot: fixed wave shape,
+         so they act as calm anchor bands between the moving ones. */
+      const layerTime = layer.isStatic ? 0 : time * layer.speed;
       for (const pt of layer.points) {
-        const layerTime = time * layer.speed;
         const waveY1 = Math.sin(pt.phaseY + layerTime);
         const waveY2 = 0.2 * Math.cos(pt.phaseY * 1.5 - layerTime * 0.6);
         const currentY = pt.baseY + (waveY1 + waveY2) * pt.ampY;
@@ -206,7 +216,8 @@ function buildOceanSvg(
       d += `L ${config.viewWidth + 300} ${config.viewHeight} Z`;
       (layer as any).element.setAttribute('d', d);
 
-      const colorWave = Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
+      /* Static ribbons also keep their base color (no breathing). */
+      const colorWave = layer.isStatic ? 0 : Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
       const dynamicOffset = colorWave * layer.colorAnimAmp;
       const finalR = Math.max(C.colorMinClamp[0], Math.min(255, Math.round(layer.baseRGB[0] + dynamicOffset)));
       const finalG = Math.max(C.colorMinClamp[1], Math.min(255, Math.round(layer.baseRGB[1] + dynamicOffset)));
@@ -277,7 +288,9 @@ function buildOceanCanvas(
     ctx.fillRect(0, seaTopY, config.viewWidth, config.viewHeight - seaTopY);
 
     for (const layer of layers) {
-      const layerTime = time * layer.speed;
+      /* Static ribbons use the time=0 snapshot: fixed wave shape and
+         fixed color, so they read as calm anchor bands. */
+      const layerTime = layer.isStatic ? 0 : time * layer.speed;
       ctx.beginPath();
       ctx.moveTo(-300, config.viewHeight);
       ctx.lineTo(-300, layer.points[0].baseY);
@@ -292,7 +305,7 @@ function buildOceanCanvas(
       ctx.lineTo(config.viewWidth + 300, config.viewHeight);
       ctx.closePath();
 
-      const colorWave = Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
+      const colorWave = layer.isStatic ? 0 : Math.sin(time * C.colorAnimSpeed + layer.colorPhase);
       const dy = colorWave * layer.colorAnimAmp;
       const r = Math.max(C.colorMinClamp[0], Math.min(255, Math.round(layer.baseRGB[0] + dy)));
       const g = Math.max(C.colorMinClamp[1], Math.min(255, Math.round(layer.baseRGB[1] + dy)));
