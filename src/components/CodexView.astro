@@ -2,9 +2,13 @@
 // Codex (图鉴) — the notebook's collection of ships & aircraft.
 //
 // Rendered statically from the manifest at build time: no search, no
-// filters, no client JS — just a grid of cards. Rarity reflects how
-// often each visitor appears in the world-clock schedule.
-import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
+// filters — just a grid of cards. Descriptions are bilingual (zh/en)
+// with a one-tap switch in the footer; pure CSS show/hide, no re-render.
+import {
+  CODEX_ENTRIES,
+  CODEX_RARITY_LABELS,
+  CODEX_RARITY_LABELS_EN,
+} from '../utils/codex';
 ---
 
 <div class="paper paper--codex" id="codex-view" data-open="false" aria-hidden="true">
@@ -19,13 +23,25 @@ import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
               <span
                 class={`paper__codex-badge paper__codex-badge--${e.rarity}`}
                 aria-hidden="true"
-              >{CODEX_RARITY_LABELS[e.rarity]}</span>
+              >
+                <span data-rarity="zh">{CODEX_RARITY_LABELS[e.rarity]}</span>
+                <span data-rarity="en" hidden>{CODEX_RARITY_LABELS_EN[e.rarity]}</span>
+              </span>
               <Fragment set:html={e.svg} />
             </div>
             <div class="paper__codex-card-body">
-              <h3 class="paper__codex-card-name">{e.name}</h3>
-              <span class="paper__codex-card-en">{e.nameEn}</span>
-              <p class="paper__codex-card-desc">{e.desc}</p>
+              <h3 class="paper__codex-card-name">
+                <span data-name="zh">{e.name}</span>
+                <span data-name="en" hidden>{e.nameEn}</span>
+              </h3>
+              <span class="paper__codex-card-en">
+                <span data-name-sub="zh">{e.nameEn}</span>
+                <span data-name-sub="en" hidden>{e.name}</span>
+              </span>
+              <p class="paper__codex-card-desc">
+                <span data-desc="zh">{e.desc}</span>
+                <span data-desc="en" hidden>{e.descEn}</span>
+              </p>
             </div>
           </article>
         ))}
@@ -33,14 +49,24 @@ import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
     </div>
   </div>
 
-  <!-- Fixed bottom footer — full-width bar, title + close centered.
-       Acts like a phone's bottom nav: always in reach, cards scroll
-       freely above it. -->
+  <!-- Fixed bottom footer — full-width bar. Title sits in the center
+       with the close button on its right and the lang toggle mirroring
+       it on the left — a symmetric pair of circular glass controls. -->
   <footer class="paper__codex-footer">
     <div class="paper__codex-footer-inner">
+      <button class="paper__codex-lang" type="button" data-lang-toggle aria-label="切换描述语言" title="中文 / EN">
+        <span class="paper__codex-lang-item" data-lang-item="zh">中文</span>
+        <span class="paper__codex-lang-item" data-lang-item="en">EN</span>
+      </button>
       <div class="paper__codex-footer-title">
-        <span class="paper__label">Codex · 图鉴</span>
-        <h2 class="paper__title" id="codex-title">窗外的图鉴</h2>
+        <h2 class="paper__title" id="codex-title">
+          <span data-name="zh">图鉴</span>
+          <span data-name="en" hidden>Codex</span>
+        </h2>
+        <span class="paper__codex-footer-sub">
+          <span data-name-sub="zh">Codex</span>
+          <span data-name-sub="en" hidden>图鉴</span>
+        </span>
       </div>
       <button class="paper__close" type="button" data-close aria-label="关闭">
         <span class="paper__x" aria-hidden="true"></span>
@@ -116,9 +142,101 @@ import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
   .paper__codex-footer .paper__title {
     font-size: 0.92rem;
   }
-  .paper__codex-footer .paper__label {
-    font-size: 0.6rem;
-    letter-spacing: 0.18em;
+  /* Subtitle line — mirrors the card's secondary language line */
+  .paper__codex-footer-sub {
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    color: var(--color-text-dim);
+  }
+
+  /* Lang toggle — 中文/EN stacked vertically, one click flips.
+     Styled as a circular glass button mirroring .paper__close:
+     same size, glass background, hairline border, inset highlight,
+     and the same hover behaviour. */
+  .paper__codex-lang {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: rgba(237, 241, 242, 0.4);
+    -webkit-backdrop-filter: blur(10px) saturate(108%);
+    backdrop-filter: blur(10px) saturate(108%);
+    border: 1px solid var(--paper-edge);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    overflow: hidden;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.15s ease;
+  }
+  .paper__codex-lang-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-dim);
+    /* Only color transitions. The selected background must switch
+       instantly — a background fade would briefly keep the old half
+       highlighted, reading as a flicker back to the previous language. */
+    transition: color 0.15s ease;
+  }
+  /* Pull the two labels toward the seam: the top half shifts down,
+     the bottom half shifts up, so 中文 and EN read as one unit.
+     (padding on the seam side shrinks the content box there, which
+     moves the centered label toward the seam.) */
+  .paper__codex-lang-item:first-child {
+    padding-top: 2px;
+  }
+  .paper__codex-lang-item:last-child {
+    padding-bottom: 2px;
+  }
+  /* The “switch” seam — horizontal divider between the stacked halves */
+  .paper__codex-lang-item:first-child {
+    border-bottom: 1px solid var(--paper-hairline);
+  }
+  /* Selected half: dim the background + deepen the text instead of
+     painting a loud accent block — keeps the glass calm and on-paper. */
+  .paper__codex-lang-item.is-current {
+    color: var(--color-text);
+    background: rgba(45, 51, 56, 0.1);
+  }
+  /* Hover echoes .paper__close: brighten + deepen the idle half */
+  .paper__codex-lang:hover {
+    background: rgba(237, 241, 242, 0.62);
+  }
+  .paper__codex-lang:hover .paper__codex-lang-item:not(.is-current) {
+    color: var(--color-text);
+  }
+
+  /* Bilingual show/hide — driven by the container's data-lang.
+     The [data-desc]/[data-rarity]/[data-name]/[data-name-sub]
+     spans are plain statically-rendered elements; :global() keeps
+     their selectors unscoped. The EN spans ship with a `hidden`
+     attribute as the no-JS fallback (default zh); when EN is active
+     we explicitly override it. */
+  #codex-view[data-lang='zh'] :global([data-desc='en']),
+  #codex-view[data-lang='zh'] :global([data-rarity='en']),
+  #codex-view[data-lang='zh'] :global([data-name='en']),
+  #codex-view[data-lang='zh'] :global([data-name-sub='en']) {
+    display: none;
+  }
+  #codex-view[data-lang='en'] :global([data-desc='zh']),
+  #codex-view[data-lang='en'] :global([data-rarity='zh']),
+  #codex-view[data-lang='en'] :global([data-name='zh']),
+  #codex-view[data-lang='en'] :global([data-name-sub='zh']) {
+    display: none;
+  }
+  #codex-view[data-lang='en'] :global([data-desc='en']),
+  #codex-view[data-lang='en'] :global([data-rarity='en']),
+  #codex-view[data-lang='en'] :global([data-name='en']),
+  #codex-view[data-lang='en'] :global([data-name-sub='en']) {
+    display: inline;
   }
   .paper__codex-grid {
     display: grid;
@@ -195,13 +313,18 @@ import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
     color: var(--paper-ink);
   }
 
-  /* Compact footer on small screens */
+  /* Compact footer on small screens.
+     Keep the lang toggle 36px — same as .paper__close (which never
+     shrinks), so the symmetric pair stays equal. */
   @media (max-width: 640px) {
     .paper__codex-footer {
       padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
     }
     .paper__codex-footer-inner {
       gap: 0.7rem;
+    }
+    .paper__codex-lang-item {
+      font-size: 0.56rem;
     }
   }
 
@@ -211,3 +334,60 @@ import { CODEX_ENTRIES, CODEX_RARITY_LABELS } from '../utils/codex';
     }
   }
 </style>
+
+<script>
+  /* Codex description language — view-local (same pattern as MusicView).
+     Pure CSS show/hide via container data-lang; persisted in localStorage. */
+  const KEY = 'codex.lang';
+  const view = document.getElementById('codex-view');
+
+  function applyLang(lang: 'zh' | 'en') {
+    if (!view) return;
+    view.dataset.lang = lang;
+    document.querySelectorAll<HTMLElement>('.paper__codex-lang-item').forEach((item) => {
+      item.classList.toggle('is-current', item.dataset.langItem === lang);
+    });
+  }
+
+  /* One button, one action: click flips the language. */
+  document.querySelector<HTMLElement>('.paper__codex-lang')?.addEventListener('click', () => {
+    const current: 'zh' | 'en' = view?.dataset.lang === 'en' ? 'en' : 'zh';
+    const next: 'zh' | 'en' = current === 'zh' ? 'en' : 'zh';
+    applyLang(next);
+    /* Persist after the current frame has committed — UI updates first,
+       storage I/O can never delay or double-trigger a paint. localStorage
+       is synchronous, but deferring it keeps rendering and persistence
+       in separate tasks so a slow/blocked store can't cause a visible
+       state flip-flop. */
+    requestAnimationFrame(() => {
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+        /* storage unavailable — non-fatal */
+      }
+    });
+  });
+
+  /* Initial language:
+     - explicit user choice (localStorage) wins
+     - otherwise, probe the system language (zh → zh, anything else → en)
+     - last resort: zh */
+  function systemLang(): 'zh' | 'en' {
+    const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+    return langs.some((l) => l.toLowerCase().startsWith('zh')) ? 'zh' : 'en';
+  }
+
+  let initial: 'zh' | 'en' = 'zh';
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (saved === 'en' || saved === 'zh') {
+      initial = saved; // explicit choice — respect it
+    } else {
+      initial = systemLang(); // never chosen — follow the system
+    }
+  } catch {
+    /* storage unavailable — fall back to system probe */
+    initial = systemLang();
+  }
+  applyLang(initial);
+</script>

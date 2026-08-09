@@ -36,18 +36,22 @@ export interface CodexEntry {
   /** Raw SVG markup (imported via ?raw). */
   svg: string;
   rarity: CodexRarity;
+  /** Chinese description (default language). */
   desc: string;
+  /** English description — shown when the codex is in EN mode. */
+  descEn: string;
 }
 
 export const CODEX_ENTRIES: CodexEntry[] = [
   {
     id: 'cargo-ship-faraway',
     name: '远洋货轮',
-    nameEn: 'Faraway Cargo Ship',
+    nameEn: 'Ocean-going Cargo Ship',
     category: 'ship',
     svg: cargoShipSvg,
     rarity: 'rare',
     desc: '满载集装箱的远洋货轮，每隔一段时间会从海平线的那一头驶过。遇到它，需要一点点运气。',
+    descEn: 'An ocean-going container ship, passing by every so often beyond the horizon. Spotting it takes a little luck.',
   },
   {
     id: 'floatplane',
@@ -57,10 +61,16 @@ export const CODEX_ENTRIES: CodexEntry[] = [
     svg: floatplaneSvg,
     rarity: 'common',
     desc: '喜欢在云下盘旋的水上飞机，螺旋桨转个不停。它是窗外最常见的过客，抬头就能看到。',
+    descEn: 'A floatplane that likes to circle beneath the clouds, propeller spinning without end. The most frequent visitor outside your window.',
   },
 ];
 
 export const CODEX_RARITY_LABELS: Record<CodexRarity, string> = {
   common: '常见',
   rare: '稀有',
+};
+
+export const CODEX_RARITY_LABELS_EN: Record<CodexRarity, string> = {
+  common: 'Common',
+  rare: 'Rare',
 };
