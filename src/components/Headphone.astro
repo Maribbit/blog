@@ -1,10 +1,17 @@
 ---
 // Headphone — click to open Apple Music playlist overlay.
+//
+// Hover/focus target is a SEPARATE invisible button (.headphone-hit)
+// sharing the exact same box as the visual, so the hover state never
+// breaks when the visual rises. The pedestal below also keeps the
+// headphone lifted via the script at the bottom.
 import hpSvg from '../assets/svg/props/Headphone.svg?raw';
 import SvgAsset from './SvgAsset.astro';
 ---
 
-<div class="headphone" data-nav="music" role="button" tabindex="0" aria-label="打开歌单">
+<!-- Stable hit zone first (sibling + selector), then the visual. -->
+<button class="headphone-hit" type="button" data-nav="music" aria-label="打开歌单"></button>
+<div class="headphone" aria-hidden="true">
   <SvgAsset content={hpSvg} />
 </div>
 
@@ -17,14 +24,9 @@ import SvgAsset from './SvgAsset.astro';
     height: calc(22 * var(--cm) * 689 / 418);
     transform: translate(-50%, -50%) rotate(-30deg);
     z-index: 27;
-    cursor: pointer;
+    /* Purely decorative — all hover/click land on .headphone-hit */
+    pointer-events: none;
     transition: top 0.25s ease, transform 0.25s ease;
-  }
-
-  .headphone:hover,
-  .headphone:focus-visible {
-    top: calc(13% - 12px);
-    transform: translate(-50%, -50%) rotate(-30deg);
   }
 
   .headphone :global(svg) {
@@ -33,7 +35,66 @@ import SvgAsset from './SvgAsset.astro';
     display: block;
   }
 
-  .headphone:focus-visible {
+  /* Invisible hit zone — the same box as the headphone, but it never
+     moves. Lifting the visual can therefore never slide it out from
+     under the cursor into a blind spot (the old :hover-on-the-visual
+     made the headphone bounce when the risen box left the cursor over
+     the pedestal). */
+  .headphone-hit {
+    position: absolute;
+    left: 40%;
+    top: 13%;
+    width: calc(22 * var(--cm));
+    height: calc(22 * var(--cm) * 689 / 418);
+    transform: translate(-50%, -50%) rotate(-30deg);
+    z-index: 28;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  /* Lift on hover/focus of the stable hit zone, or on the pedestal
+     (.is-lifted, toggled by the script below). */
+  .headphone-hit:hover + .headphone,
+  .headphone-hit:focus-visible + .headphone,
+  .headphone.is-lifted {
+    top: calc(13% - 12px);
+    transform: translate(-50%, -50%) rotate(-30deg);
+  }
+
+  .headphone-hit:focus-visible {
     outline: none;
   }
 </style>
+
+<script>
+  /* The pedestal under the headphone keeps the headphone lifted while
+     hovered. Hit-testing is restricted to the PAINTED pedestal shape
+     (container and <svg> are pointer-events: none; the drawn <path>s
+     re-enable it — see Pedestal.astro), so empty space inside the box
+     — e.g. below the base — no longer lifts the headphone.
+     pointerover/pointerout bubble, so we listen on the container and
+     test whether the hit target is a painted path. The pedestal is a
+     stable element (unlike the rising headphone), so moving the cursor
+     onto it mid-lift never bounces: the hit zone's pointerleave and
+     the pedestal's pointerover land in the same event dispatch. */
+  const headphone = document.querySelector<HTMLElement>('.headphone');
+  const pedestal = document.getElementById('pedestal');
+  if (headphone && pedestal) {
+    let onPedestal = false;
+    const sync = () => headphone.classList.toggle('is-lifted', onPedestal);
+    const onShape = (e: Event) =>
+      (e.target as Element | null)?.closest?.('.pedestal__svg') != null;
+    pedestal.addEventListener('pointerover', (e) => {
+      if (onShape(e)) { onPedestal = true; sync(); }
+    });
+    pedestal.addEventListener('pointerout', (e) => {
+      const next = (e as PointerEvent).relatedTarget as Element | null;
+      if (onShape(e) && !(next && next.closest?.('.pedestal__svg'))) {
+        onPedestal = false;
+        sync();
+      }
+    });
+  }
+</script>

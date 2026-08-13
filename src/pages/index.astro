@@ -19,11 +19,6 @@ import Desk from '../components/Desk.astro';
           <WindowView />
         </div>
         <OpenWindow />
-
-        <div class="wall-item wall-item--clock">
-          <WallClock />
-        </div>
-
       </div>
 
       <div
@@ -41,6 +36,13 @@ import Desk from '../components/Desk.astro';
     </div>
 
     <Overlays />
+
+    <!-- Floating top-center clock — fixed UI chrome, centred below the
+         scroll indicator bar. z-index stays under the paper overlays
+         (100) so opening a view covers it with the veil like the room. -->
+    <div class="clock-float">
+      <WallClock />
+    </div>
 
     <!-- ──── Scroll indicator bar ──── -->
     <div class="scroll-bar" id="scroll-bar" aria-hidden="true">
@@ -320,20 +322,19 @@ import Desk from '../components/Desk.astro';
     z-index: -1;
   }
 
-  /* Wall items: fractions of the window so they stay in proportion. */
-  .wall-item {
-    position: absolute;
-    z-index: 6;
-  }
-
-  /* Wall clock hangs on the wall, upper-left of the window frame:
-     its right edge sits 12% of win-w left of the frame, and its top
-     edge 6% of win-h above the frame's top edge. */
-  .wall-item--clock {
-    left: calc(-12% - var(--clock-size));
-    top: -6%;
+  /* Floating top-center clock — fixed UI chrome aligned with the
+     scroll indicator bar above it (the bar is 6px tall at top: 0, so
+     the clock sits 8px below it). z-index below the paper overlays
+     (100): opening a view covers the clock with the veil like the rest
+     of the room, so no explicit hide rule is needed. */
+  .clock-float {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
     width: var(--clock-size);
     height: var(--clock-size);
+    z-index: 50;
   }
 
 
