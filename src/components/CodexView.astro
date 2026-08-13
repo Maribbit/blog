@@ -51,7 +51,10 @@ import {
 
   <!-- Fixed bottom footer — full-width bar. Title sits in the center
        with the close button on its right and the lang toggle mirroring
-       it on the left — a symmetric pair of circular glass controls. -->
+       it on the left — a symmetric pair of circular glass controls.
+       Both controls are pinned symmetrically about the footer's CENTER
+       (not the title), so the zh/en switch — which changes the title's
+       width — never nudges the buttons. -->
   <footer class="paper__codex-footer">
     <div class="paper__codex-footer-inner">
       <button class="paper__codex-lang" type="button" data-lang-toggle aria-label="切换描述语言" title="中文 / EN">
@@ -124,12 +127,34 @@ import {
     backdrop-filter: blur(18px) saturate(112%);
   }
   .paper__codex-footer-inner {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.9rem;
     max-width: 880px;
     margin: 0 auto;
+  }
+  /* Both circular controls are taken out of flow and pinned
+     symmetrically about the footer's center. The centered title floats
+     between them, so when its width changes with the zh/en switch
+     (图鉴 ⇄ Codex) the buttons stay exactly where they are. Inner edge
+     of each button sits 2.2rem from center: a comfortable gap for the
+     widest title ("Codex", ~20px half-width) with slack for other
+     fonts, and a clean symmetric pair on the page. */
+  .paper__codex-footer-inner .paper__codex-lang,
+  .paper__codex-footer-inner .paper__close {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .paper__codex-footer-inner .paper__codex-lang {
+    left: 50%;
+    margin-left: calc(-2.2rem - 36px);
+  }
+  .paper__codex-footer-inner .paper__close {
+    right: 50%;
+    margin-right: calc(-2.2rem - 36px);
   }
   .paper__codex-footer-title {
     display: flex;

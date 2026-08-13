@@ -1,7 +1,7 @@
 # Character Breathing Rig — Maribbit's Blog
 
 ## Asset
-`src/components/Character.astro` imports `public/character/Character_Standing.svg` (the rigged version, 453×1380 viewBox). The earlier T-pose is in the same folder but unused.
+`src/components/Character.astro` imports `src/assets/character/Character_Standing.svg` (the rigged version, 453×1380 viewBox) via `?raw`. The earlier T-pose and the stale `public/character/` copies were removed — `src/assets/character/` is the single source of truth.
 
 ## Anatomical Pivots (in viewBox coordinates, centerline x=226.5)
 

@@ -163,6 +163,31 @@ import CodexView from './CodexView.astro';
     return (VIEWS as readonly string[]).includes(key) ? (key as View) : null;
   }
 
+  /* Warm the Apple Music connection lazily — the embed iframe only starts
+     loading once the music overlay is actually opened, so doing this from
+     the static <head> would waste a TCP+TLS round-trip on every page load
+     for a connection the visitor may never use. Injected the first time
+     the music view opens, mirroring the preconnects the iframe benefits
+     from (matching the <head> hints that used to ship statically). */
+  let warmedAppleMusic = false;
+  function warmAppleMusic() {
+    if (warmedAppleMusic) return;
+    warmedAppleMusic = true;
+    const hints: Array<[string, string]> = [
+      ['preconnect', 'https://embed.music.apple.com'],
+      ['dns-prefetch', 'https://embed.music.apple.com'],
+      ['preconnect', 'https://music.apple.com'],
+      ['dns-prefetch', 'https://music.apple.com'],
+    ];
+    for (const [rel, href] of hints) {
+      const link = document.createElement('link');
+      link.rel = rel;
+      link.href = href;
+      if (rel === 'preconnect') link.setAttribute('crossorigin', '');
+      document.head.appendChild(link);
+    }
+  }
+
   function render() {
     const active = currentView();
     for (const view of VIEWS) {
@@ -175,6 +200,9 @@ import CodexView from './CodexView.astro';
          so focus can never be retained inside a hidden surface. */
       if (open) el.removeAttribute('inert');
       else el.setAttribute('inert', '');
+      /* Warm the Apple Music connection the first time the music view
+         actually opens (see warmAppleMusic). */
+      if (open && view === 'music') warmAppleMusic();
     }
     /* While any overlay is open, tell the room to hide its top scroll
        bar (index.astro keys off body[data-overlay]). */
