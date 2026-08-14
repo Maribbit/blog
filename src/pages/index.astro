@@ -19,6 +19,13 @@ import Desk from '../components/Desk.astro';
           <WindowView />
         </div>
         <OpenWindow />
+
+        <!-- Wall clock hangs above the window frame, centered on its
+             top edge. Lives INSIDE the scene (absolute, not fixed), so
+             it scrolls with the room instead of staying pinned. -->
+        <div class="clock-on-frame">
+          <WallClock />
+        </div>
       </div>
 
       <div
@@ -36,13 +43,6 @@ import Desk from '../components/Desk.astro';
     </div>
 
     <Overlays />
-
-    <!-- Floating top-center clock — fixed UI chrome, centred below the
-         scroll indicator bar. z-index stays under the paper overlays
-         (100) so opening a view covers it with the veil like the room. -->
-    <div class="clock-float">
-      <WallClock />
-    </div>
 
     <!-- ──── Scroll indicator bar ──── -->
     <div class="scroll-bar" id="scroll-bar" aria-hidden="true">
@@ -215,8 +215,13 @@ import Desk from '../components/Desk.astro';
     --cm: calc(var(--char-h) / 170);
 
     /* Perspective math (VP, narrowing, sea horizon) lives in
-       src/utils/perspective.ts — runtime JS, not CSS calc. */
-    --clock-size: calc(var(--win-w) * 0.072);
+       src/utils/perspective.ts — runtime JS, not CSS calc.
+       Clock assembly (face + three gear rings + spokes) uses a
+       200-unit viewBox, so the size factor scales ×200/160
+       (0.09 → ~0.1). The face renders slightly smaller than before
+       (~11%) but stays dominant, while the wider gear crown wraps it
+       without overflowing the window frame's headroom. */
+    --clock-size: calc(var(--win-w) * 0.1);
 
     position: fixed;
     inset: 0;
@@ -322,19 +327,22 @@ import Desk from '../components/Desk.astro';
     z-index: -1;
   }
 
-  /* Floating top-center clock — fixed UI chrome aligned with the
-     scroll indicator bar above it (the bar is 6px tall at top: 0, so
-     the clock sits 8px below it). z-index below the paper overlays
-     (100): opening a view covers the clock with the veil like the rest
-     of the room, so no explicit hide rule is needed. */
-  .clock-float {
-    position: fixed;
-    top: 14px;
+  /* Wall clock — hangs above the window frame, centered on its top
+     edge. Positioned inside .obj--window (overflow: visible) so it
+     scrolls with the room; bottom: 100% parks the clock just above the
+     frame. The translateY is a fixed 4px gap — the taller 200-unit
+     gear assembly nearly fills the headroom between the scroll bar
+     (6px) and the frame, so a fixed small lift keeps it clear of both.
+     z-index 7 keeps it above the frame; the paper overlays (z-index
+     100) still cover it. */
+  .clock-on-frame {
+    position: absolute;
     left: 50%;
-    transform: translateX(-50%);
+    bottom: 100%;
+    transform: translateX(-50%) translateY(-4px);
     width: var(--clock-size);
     height: var(--clock-size);
-    z-index: 50;
+    z-index: 7;
   }
 
 

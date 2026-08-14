@@ -1,28 +1,61 @@
 ---
 // Minimal wall clock. Hands are rotated to the live system time by the script.
+// Decorative mechanics: a balance wheel (three spokes, inward-facing teeth)
+// oscillates harmonically, and an outer gear with three spokes steps
+// clockwise at a steady 3° per 100ms.
+//
+// viewBox 200×200 (center 100,100): the face keeps r=56 while the gear
+// assembly wraps it — outer teeth reach r=88. --clock-size in index.astro
+// is scaled up (×200/160) so the face renders at nearly the same pixels.
 ---
 
 <div class="clock" role="img" aria-label="与当前时间同步的时钟">
-  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-    <!-- Angular hexagonal face (no rounded corners) -->
-    <polygon points="60,4 108.5,32 108.5,88 60,116 11.5,88 11.5,32"
-      fill="#eef2f3" stroke="#c2cacd" stroke-width="3" stroke-linejoin="miter" />
-    <!-- Ticks: 12 / 3 / 6 / 9 (sharp rectangles) -->
-    <rect x="58.5" y="14" width="3" height="10" fill="#79838a" />
-    <rect x="58.5" y="96" width="3" height="10" fill="#79838a" />
-    <rect x="94" y="58.5" width="10" height="3" fill="#79838a" />
-    <rect x="16" y="58.5" width="10" height="3" fill="#79838a" />
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Balance wheel (middle) — three spokes + ring with INWARD-facing
+         teeth (an internal ring gear: the solid band sits on the outer
+         edge, the dashed teeth on the inner edge point at the hub — the
+         opposite of the outer gear's outward teeth). Oscillates on a
+         harmonic swing; the spokes are covered by the face (drawn
+         later), so only the outer half shows. Offset 60° from the outer
+         gear's spokes so the two triads interleave. -->
+    <g id="gear-middle">
+      <circle cx="100" cy="100" r="76" fill="none" stroke="#d5d9db" stroke-width="8" opacity="0.9" />
+      <!-- dasharray 5 5.7 at r=70, stroke 7 → inward teeth attached to
+           the band's inner edge, pointing at the hub -->
+      <circle cx="100" cy="100" r="70" fill="none" stroke="#c2cacd" stroke-width="7" stroke-dasharray="5 5.7" opacity="0.85" />
+    </g>
 
-    <!-- Hands (sharp rectangles; all pivot at the center 60,60) -->
-    <rect id="hand-hour" x="58" y="36" width="4" height="28" fill="#2d3338"
-      style="transform-box: view-box; transform-origin: 60px 60px;" />
-    <rect id="hand-minute" x="58.8" y="24" width="2.4" height="40" fill="#2d3338"
-      style="transform-box: view-box; transform-origin: 60px 60px;" />
-    <rect id="hand-second" x="59.4" y="20" width="1.2" height="46" fill="#94231f"
-      style="transform-box: view-box; transform-origin: 60px 60px;" />
+    <!-- Outermost gear + three connecting rods — one rotating assembly.
+         The rods run from the central hub out to the ring and are covered
+         by the face (drawn below it), so only the portion past the face
+         shows. Steps clockwise at a steady 3° per 100ms. -->
+    <g id="gear-outer">
+      <!-- The three spokes are offset +2.44° (half a tooth width) so
+           each spoke passes through the CENTER of a tooth rather than
+           its leading edge — a dash at 7.5 of the 23.04-unit pitch
+           spans 4.88°, so half is 2.44°. The gear steps 3°/tick, but
+           the offset is static and shared, so alignment holds forever. -->
+      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(2.44 100 100)" />
+      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(122.44 100 100)" />
+      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(242.44 100 100)" />
+      <circle cx="100" cy="100" r="86" fill="none" stroke="#d5d9db" stroke-width="5" opacity="0.9" />
+      <!-- dasharray 7.5 15.54 at r=88 → 24 teeth (pitch 15°) -->
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#c2cacd" stroke-width="7" stroke-dasharray="7.5 15.54" opacity="0.85" />
+    </g>
+
+    <!-- Round face -->
+    <circle cx="100" cy="100" r="56" fill="#eef2f3" stroke="#c2cacd" stroke-width="3" />
+
+    <!-- Hands (sharp rectangles; all pivot at the center 100,100) -->
+    <rect id="hand-hour" x="98" y="76" width="4" height="28" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 100px 100px;" />
+    <rect id="hand-minute" x="98.8" y="64" width="2.4" height="40" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 100px 100px;" />
+    <rect id="hand-second" x="99.4" y="60" width="1.2" height="46" fill="#94231f"
+      style="transform-box: view-box; transform-origin: 100px 100px;" />
     <!-- Center hub: a small diamond -->
-    <rect x="55" y="55" width="10" height="10" fill="#2d3338"
-      style="transform-box: view-box; transform-origin: 60px 60px; transform: rotate(45deg);" />
+    <rect x="95" y="95" width="10" height="10" fill="#2d3338"
+      style="transform-box: view-box; transform-origin: 100px 100px; transform: rotate(45deg);" />
   </svg>
 </div>
 
@@ -30,12 +63,19 @@
   .clock {
     width: 100%;
     height: 100%;
-    filter: drop-shadow(0 5px 9px var(--color-shadow));
   }
 
   .clock svg {
     width: 100%;
     height: 100%;
+  }
+
+  /* Gears pivot at the viewBox center — CSS rotation on the <g> keeps
+     every tooth in place while the ring swings. */
+  #gear-outer,
+  #gear-middle {
+    transform-box: view-box;
+    transform-origin: 100px 100px;
   }
 </style>
 
@@ -71,4 +111,42 @@
       tick();
     }
   });
+
+  /* Three independent mechanical motions — all driven by world-clock
+     time so they are deterministic across reloads. Decorative only:
+     frozen under prefers-reduced-motion so the hands stay the sole
+     motion. */
+  const gearOuter = document.getElementById('gear-outer');
+  const gearMiddle = document.getElementById('gear-middle');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion && gearOuter && gearMiddle) {
+    /* Balance wheel (middle): harmonic oscillation, 6s period, ±56°.
+       A sine gives the physical feel the user wants — slowest at the
+       endpoints (direction reversal), fastest at the equilibrium
+       midpoint — so the swing visibly accelerates and decelerates
+       every half period. The large amplitude makes the rotation
+       clearly visible around the dial. */
+    const BALANCE_AMP = 60;       // degrees
+    const BALANCE_PERIOD = 12000;  // ms
+
+    /* Outer ring — clean stepped escapement, no vibration. 24 teeth →
+       pitch 15°. Each 100ms tick advances exactly 3° (no overshoot /
+       settle wobble); 3 vs the 15° pitch leaves a 12° tooth drift per
+       step, so the teeth crawl forward instead of re-aligning (which
+       would look frozen). */
+    const OUTER_TICK = 100;  // ms per step
+    const OUTER_STEP = 1;    // degrees per step (≠ pitch 15°)
+
+    register((time) => {
+      /* Balance wheel — continuous harmonic swing. */
+      const bal = BALANCE_AMP * Math.sin((time / BALANCE_PERIOD) * Math.PI * 2);
+      gearMiddle.style.transform = `rotate(${bal.toFixed(2)}deg)`;
+
+      /* Outer ring — steady 3° step every 100ms, kept under 360° so
+         the transform string stays small and exact. */
+      const steps = Math.floor(time / OUTER_TICK);
+      const ang = ((steps % 360) * OUTER_STEP) % 360;
+      gearOuter.style.transform = `rotate(${ang.toFixed(2)}deg)`;
+    });
+  }
 </script>
