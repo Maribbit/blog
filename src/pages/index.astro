@@ -190,8 +190,20 @@ import Desk from '../components/Desk.astro';
       vp horizon           computed per perspective.ts from sill ratio
   */
   .room {
-    --win-top-margin: 104px;
-    --char-h: calc((100dvh - var(--win-top-margin)) / 1.3341);
+    /* Scene fills the viewport top-to-bottom at every height.
+       Geometry chain (top → bottom):
+         1. scroll bar        6px tall, at top:0
+         2. clock — its top is anchored flush to the scroll bar
+         3. window frame, sill front lands on the character's wrist
+         4. character, feet at the bottom edge
+       The combined scale factor 1.4891 = 1.3341 (wrist + window-
+       to-char ratio) + 0.155 (clock's scalar of --char-h).
+       --headroom (10px) = scroll bar (6px) + the 4px translateY gap
+       under the clock. With this exact value the clock's top lands
+       on 6px (flush under the bar) at EVERY viewport height, so the
+       scene always starts at the very top and ends at the bottom. */
+    --headroom: 10px;
+    --char-h: calc((100dvh - var(--headroom)) / 1.4891);
     --char-w: calc(var(--char-h) * 453 / 1380);
     --char-wrist-from-bottom: 0.4975;
 
@@ -220,7 +232,9 @@ import Desk from '../components/Desk.astro';
        200-unit viewBox, so the size factor scales ×200/160
        (0.09 → ~0.1). The face renders slightly smaller than before
        (~11%) but stays dominant, while the wider gear crown wraps it
-       without overflowing the window frame's headroom. */
+       without overflowing the window frame's headroom.
+       The clock hangs in the top headroom (scroll bar 6px + 4px
+       translateY gap), so it never crowds the window frame. */
     --clock-size: calc(var(--win-w) * 0.1);
 
     position: fixed;
