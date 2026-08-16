@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>账本驱动的双循环交付 · 单页演示</title>
+<style>
+  :root{
+    --bg:#0a0f1c; --panel:#101828; --panel2:#0d1424;
+    --line:rgba(148,163,184,.14); --txt:#e6edf7; --mut:#8fa3bf;
+    --blue:#38bdf8; --blue-d:#0ea5e9;
+    --amber:#fbbf24; --amber-d:#f59e0b;
+    --green:#34d399; --red:#f87171;
+    --radius:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    background:var(--bg); color:var(--txt); line-height:1.6;
+    background-image:
+      radial-gradient(900px 500px at 15% -5%, rgba(56,189,248,.10), transparent 60%),
+      radial-gradient(900px 500px at 85% 0%, rgba(251,191,36,.08), transparent 60%);
+  }
+  /* ---------- 导航 ---------- */
+  nav{
+    position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:26px;
+    padding:12px 28px; background:rgba(10,15,28,.78); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line); font-size:14px;
+  }
+  nav .brand{font-weight:700; letter-spacing:.5px}
+  nav .brand b{color:var(--blue)}
+  nav .brand i{color:var(--amber); font-style:normal}
+  nav a{color:var(--mut); text-decoration:none; transition:color .2s}
+  nav a:hover{color:var(--txt)}
+  nav .spacer{flex:1}
+  /* ---------- 布局 ---------- */
+  main{max-width:1240px; margin:0 auto; padding:0 26px 90px}
+  section{margin-top:86px}
+  .kicker{
+    display:inline-block; font-size:12.5px; letter-spacing:2px; color:var(--blue);
+    border:1px solid rgba(56,189,248,.35); border-radius:999px; padding:4px 14px;
+    background:rgba(56,189,248,.08); margin-bottom:14px;
+  }
+  .kicker.amber{color:var(--amber); border-color:rgba(251,191,36,.35); background:rgba(251,191,36,.08)}
+  h2{font-size:30px; margin-bottom:10px}
+  .sub{color:var(--mut); max-width:760px; margin-bottom:30px}
+  /* ---------- Hero ---------- */
+  header.hero{
+    position:relative; text-align:center; padding:96px 20px 60px; overflow:hidden;
+  }
+  header.hero::after{
+    content:"∞"; position:absolute; left:50%; top:46%; transform:translate(-50%,-50%);
+    font-size:min(46vw,520px); line-height:1; color:rgba(148,163,184,.06);
+    font-family:Georgia,serif; pointer-events:none;
+  }
+  header.hero .tag{
+    display:inline-block; font-size:13px; letter-spacing:3px; color:var(--mut);
+    border:1px solid var(--line); border-radius:999px; padding:6px 18px; margin-bottom:22px;
+    background:rgba(255,255,255,.03);
+  }
+  header.hero h1{font-size:clamp(34px,5.2vw,58px); line-height:1.25; position:relative}
+  header.hero h1 .b{color:var(--blue)}
+  header.hero h1 .a{color:var(--amber)}
+  header.hero p.lead{
+    margin:20px auto 0; max-width:680px; color:var(--mut); font-size:17px; position:relative;
+  }
+  .stats{display:flex; gap:16px; justify-content:center; margin-top:40px; flex-wrap:wrap; position:relative}
+  .stat{
+    min-width:150px; padding:16px 22px; border:1px solid var(--line); border-radius:var(--radius);
+    background:rgba(255,255,255,.03);
+  }
+  .stat .n{font-size:30px; font-weight:800}
+  .stat .n.b{color:var(--blue)} .stat .n.a{color:var(--amber)} .stat .n.g{color:var(--green)}
+  .stat .t{font-size:13px; color:var(--mut)}
+  /* ---------- 概念区 ---------- */
+  .concept-grid{display:grid; grid-template-columns:1fr 1fr; gap:34px; align-items:stretch}
+  @media (max-width:900px){.concept-grid{grid-template-columns:1fr}}
+  .card{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    padding:26px 28px;
+  }
+  .quote{
+    border-left:3px solid var(--blue); padding:6px 0 6px 18px; margin:18px 0 24px;
+    color:#cfe7ff; font-size:17px; background:rgba(56,189,248,.05); border-radius:0 12px 12px 0;
+  }
+  .mini-cards{display:grid; gap:14px}
+  .mini{display:flex; gap:14px; align-items:flex-start}
+  .mini .dot{width:12px; height:12px; border-radius:4px; margin-top:7px; flex:none}
+  .mini b{display:block; margin-bottom:2px}
+  .mini p{font-size:13.5px; color:var(--mut)}
+  /* 模拟账本 */
+  .ledger-card h3{display:flex; align-items:center; gap:10px; margin-bottom:4px; font-size:18px}
+  .ledger-card h3 .ic{
+    width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+    background:linear-gradient(135deg, rgba(56,189,248,.25), rgba(251,191,36,.25));
+    border:1px solid var(--line); font-size:15px;
+  }
+  .ledger-card .cap{font-size:12.5px; color:var(--mut); margin-bottom:18px}
+  .unit{padding:13px 0; border-top:1px dashed var(--line)}
+  .unit .row{display:flex; justify-content:space-between; font-size:14px; margin-bottom:8px}
+  .unit .st{font-size:12px; padding:2px 10px; border-radius:999px; border:1px solid}
+  .st.g{color:var(--green); border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.08)}
+  .st.a{color:var(--amber); border-color:rgba(251,191,36,.4); background:rgba(251,191,36,.08)}
+  .st.b{color:var(--blue); border-color:rgba(56,189,248,.4); background:rgba(56,189,248,.08)}
+  .st.x{color:var(--mut); border-color:var(--line); background:rgba(148,163,184,.08)}
+  .bar{height:8px; border-radius:99px; background:rgba(148,163,184,.14); overflow:hidden}
+  .bar i{display:block; height:100%; width:0; border-radius:99px; transition:width 1.2s cubic-bezier(.2,.7,.2,1)}
+  .bar i.g{background:linear-gradient(90deg,#059669,var(--green))}
+  .bar i.a{background:linear-gradient(90deg,#d97706,var(--amber))}
+  .bar i.b{background:linear-gradient(90deg,#0284c7,var(--blue))}
+  .bar i.x{background:#64748b}
+  /* ---------- 双循环图 ---------- */
+  .stage{
+    border:1px solid var(--line); border-radius:22px; padding:18px 14px 8px;
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  }
+  .controls{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:4px 12px 12px}
+  button{
+    cursor:pointer; font:inherit; font-size:14px; font-weight:600; color:#062032;
+    background:linear-gradient(135deg,var(--blue),#7dd3fc); border:none; border-radius:12px;
+    padding:9px 20px; transition:transform .15s, box-shadow .15s;
+    box-shadow:0 4px 18px rgba(56,189,248,.25);
+  }
+  button:hover{transform:translateY(-1px)}
+  button:disabled{opacity:.45; cursor:default; transform:none}
+  button.ghost{
+    background:transparent; color:var(--mut); border:1px solid var(--line); box-shadow:none;
+  }
+  .status{
+    font-size:14px; color:var(--mut); min-height:22px; flex:1; min-width:260px;
+  }
+  .status b{color:var(--txt)}
+  #loopSvg{width:100%; height:auto; display:block}
+  .legend{
+    display:flex; gap:22px; flex-wrap:wrap; justify-content:center;
+    padding:10px 0 14px; font-size:13px; color:var(--mut);
+  }
+  .legend span{display:flex; align-items:center; gap:8px}
+  .sw{width:22px; height:4px; border-radius:99px}
+  .sw.b{background:var(--blue)} .sw.a{background:var(--amber)}
+  .sw.r{background:var(--red)} .sw.g{background:var(--green)}
+  /* SVG 内部样式 */
+  #loopSvg text{font-family:inherit}
+  .loop-title{font-size:19px; font-weight:800; letter-spacing:1px}
+  .cap-txt{font-size:12.5px; fill:var(--mut)}
+  .arc{fill:none; stroke-width:3.4; stroke-linecap:round}
+  .arc.blue{stroke:var(--blue); filter:drop-shadow(0 0 5px rgba(56,189,248,.45))}
+  .arc.amber{stroke:var(--amber); filter:drop-shadow(0 0 5px rgba(251,191,36,.45))}
+  .arc-label{font-size:12.5px; fill:#c3d2e8}
+  .arc-label2{font-size:12.5px; fill:var(--blue); font-weight:700}
+  .node rect.body{
+    fill:#131e33; stroke-width:1.6; rx:16;
+    transition:filter .25s, stroke .25s;
+  }
+  .node.blue rect.body{stroke:rgba(56,189,248,.55)}
+  .node.amber rect.body{stroke:rgba(251,191,36,.55)}
+  .node .t{font-size:15.5px; font-weight:700; fill:var(--txt)}
+  .node .s{font-size:11.5px; fill:var(--mut)}
+  .node .badge{stroke:none}
+  .node .badge-t{font-size:13px; font-weight:800; fill:#0a0f1c}
+  .node.active rect.body{filter:drop-shadow(0 0 14px rgba(255,255,255,.35))}
+  .node.blue.active rect.body{stroke:var(--blue); filter:drop-shadow(0 0 16px rgba(56,189,248,.8))}
+  .node.amber.active rect.body{stroke:var(--amber); filter:drop-shadow(0 0 16px rgba(251,191,36,.8))}
+  #ledgerG.active circle.core{filter:drop-shadow(0 0 22px rgba(52,211,153,.75))}
+  .fail{fill:none; stroke:var(--red); stroke-width:2.6; stroke-dasharray:7 6}
+  .fail-label{font-size:12.5px; fill:var(--red); font-weight:700}
+  /* ---------- 图表区 ---------- */
+  .chart-wrap{
+    border:1px solid var(--line); border-radius:22px; padding:26px 20px 12px;
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  }
+  #chartSvg{width:100%; height:auto; display:block}
+  #chartSvg text{font-family:inherit}
+  .axis{stroke:rgba(148,163,184,.3); stroke-width:1}
+  .grid{stroke:rgba(148,163,184,.10); stroke-width:1}
+  .tick{font-size:11.5px; fill:var(--mut)}
+  .band-label{font-size:12px; font-weight:700}
+  .chart-legend{display:flex; gap:24px; justify-content:center; flex-wrap:wrap; padding:8px 0 14px; font-size:13px; color:var(--mut)}
+  .chart-legend span{display:flex; align-items:center; gap:8px}
+  /* ---------- 步骤区 ---------- */
+  .loops{display:grid; grid-template-columns:1fr 1fr; gap:28px}
+  @media (max-width:900px){.loops{grid-template-columns:1fr}}
+  .loop-col h3{
+    display:flex; align-items:center; gap:10px; font-size:19px; margin-bottom:16px;
+  }
+  .pill{font-size:12px; font-weight:700; padding:3px 12px; border-radius:999px}
+  .pill.b{color:var(--blue); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.35)}
+  .pill.a{color:var(--amber); background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.35)}
+  .step{
+    display:flex; gap:16px; padding:16px 18px; margin-bottom:12px;
+    border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.025);
+    transition:transform .2s, border-color .2s;
+  }
+  .step:hover{transform:translateX(4px)}
+  .loop-col.b .step:hover{border-color:rgba(56,189,248,.5)}
+  .loop-col.a .step:hover{border-color:rgba(251,191,36,.5)}
+  .num{
+    flex:none; width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+    font-weight:800; font-size:15px;
+  }
+  .loop-col.b .num{background:rgba(56,189,248,.14); color:var(--blue); border:1px solid rgba(56,189,248,.4)}
+  .loop-col.a .num{background:rgba(251,191,36,.14); color:var(--amber); border:1px solid rgba(251,191,36,.4)}
+  .step b{display:block; font-size:15px; margin-bottom:2px}
+  .step p{font-size:13.5px; color:var(--mut)}
+  .step .meta{font-size:11.5px; color:#7d90ad; margin-top:5px; display:block}
+  .finale{
+    margin-top:30px; text-align:center; padding:26px;
+    border-radius:var(--radius); font-size:17px; font-weight:600;
+    border:1px solid rgba(52,211,153,.35);
+    background:linear-gradient(90deg, rgba(56,189,248,.10), rgba(52,211,153,.12), rgba(251,191,36,.10));
+  }
+  .finale .g{color:var(--green)}
+  footer{text-align:center; color:#5b6b85; font-size:12.5px; margin-top:70px}
+  /* ---------- 滚动显现 ---------- */
+  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease}
+  .reveal.on{opacity:1; transform:none}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><b>分析循环</b> × <i>实现循环</i> · 双循环交付</div>
+  <div class="spacer"></div>
+  <a href="#concept">账本概念</a>
+  <a href="#diagram">双循环图</a>
+  <a href="#chart">可兑现曲线</a>
+  <a href="#steps">八步流程</a>
+</nav>
+
+<header class="hero">
+  <div class="tag">方案单页演示 · SINGLE PAGE DECK</div>
+  <h1>以<span class="b">「账本」</span>为枢纽的<br><span class="b">需求分析</span> × <span class="a">需求实现</span> 双循环</h1>
+  <p class="lead">把原始需求拆解为可兑现单元并记入「账本」，分析循环让可兑现程度逐渐上升至临界，实现循环把切片真正交付兑现——双循环交替推进，直到 Story 全部兑现。</p>
+  <div class="stats">
+    <div class="stat"><div class="n b">1</div><div class="t">本账本 · 可兑现单元集合</div></div>
+    <div class="stat"><div class="n a">2</div><div class="t">个循环 · 分析 + 实现</div></div>
+    <div class="stat"><div class="n g">8</div><div class="t">个步骤 · 闭环推进</div></div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 概念 ============ -->
+<section id="concept" class="reveal">
+  <span class="kicker">核心概念</span>
+  <h2>什么是「账本」</h2>
+  <p class="sub">账本是双循环共享的枢纽：分析循环不断写入并提升单元的「可兑现程度」，实现循环把达到阈值的单元取出交付、并回写「已兑现」。</p>
+  <div class="concept-grid">
+    <div class="card">
+      <div class="quote">“账本”，是把从原始需求拆解出来的<b>可兑现单元集合</b>。</div>
+      <div class="mini-cards">
+        <div class="mini">
+          <div class="dot" style="background:var(--blue)"></div>
+          <div><b>可兑现单元</b><p>从原始需求拆解出的最小可交付切片，是账本的基本条目。</p></div>
+        </div>
+        <div class="mini">
+          <div class="dot" style="background:var(--amber)"></div>
+          <div><b>可兑现程度</b><p>随分析循环多轮迭代而上升：初始化 → 逐渐上升 → 达到临界（阈值）。</p></div>
+        </div>
+        <div class="mini">
+          <div class="dot" style="background:var(--green)"></div>
+          <div><b>已兑现</b><p>切片通过用户测试后回写账本，标记该单元交付完成、已经兑现。</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="card ledger-card">
+      <h3><span class="ic">▤</span>账本 · Ledger<span style="flex:1"></span><span class="pill b" style="font-size:11px">实时更新</span></h3>
+      <div class="cap">可兑现单元清单 · 可兑现程度随循环推进</div>
+      <div class="unit"><div class="row"><span>单元 A · 用户登录接口</span><span class="st g">已兑现 · 100%</span></div><div class="bar"><i class="g" data-w="100"></i></div></div>
+      <div class="unit"><div class="row"><span>单元 B · 订单表单校验</span><span class="st a">达到临界 · 88%</span></div><div class="bar"><i class="a" data-w="88"></i></div></div>
+      <div class="unit"><div class="row"><span>单元 C · 权限拦截逻辑</span><span class="st b">分析中 · 45%</span></div><div class="bar"><i class="b" data-w="45"></i></div></div>
+      <div class="unit"><div class="row"><span>单元 D · 操作日志埋点</span><span class="st x">初始化 · 15%</span></div><div class="bar"><i class="x" data-w="15"></i></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 双循环图 ============ -->
+<section id="diagram" class="reveal">
+  <span class="kicker amber">全景图</span>
+  <h2>双循环流程图</h2>
+  <p class="sub">左侧蓝色为「需求分析循环」，右侧琥珀色为「需求实现循环」，中央的账本是两个循环共享的枢纽。点击「播放演示」可观看一轮完整的双循环推进过程（含一次未通过返工）。</p>
+  <div class="stage">
+    <div class="controls">
+      <button id="playBtn">▶ 播放演示</button>
+      <button id="resetBtn" class="ghost">重置</button>
+      <div class="status" id="statusTxt">待命 — 点击播放，观看双循环如何围绕账本运转。</div>
+    </div>
+    <svg id="loopSvg" viewBox="0 0 1280 760" role="img" aria-label="双循环流程图"></svg>
+    <div class="legend">
+      <span><i class="sw b"></i>需求分析循环（步骤 ① ~ ⑤）</span>
+      <span><i class="sw a"></i>需求实现循环（步骤 ⑤ ~ ⑧）</span>
+      <span><i class="sw r"></i>用户测试未通过 · 返工</span>
+      <span><i class="sw g"></i>中央枢纽 · 账本</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 图表 ============ -->
+<section id="chart" class="reveal">
+  <span class="kicker">数据视角</span>
+  <h2>可兑现程度 · 双循环推进曲线</h2>
+  <p class="sub">蓝色曲线是当前批次单元在分析循环中的「可兑现程度」，多轮反问与更新使其爬升至 80% 阈值；随后进入实现循环（琥珀色背景带），绿色阶梯记录「已兑现单元占比」逐批跳升，直至 100%。</p>
+  <div class="chart-wrap">
+    <svg id="chartSvg" viewBox="0 0 1180 470" role="img" aria-label="可兑现程度曲线图"></svg>
+    <div class="chart-legend">
+      <span><i class="sw b"></i>可兑现程度（当前批次 · 分析循环）</span>
+      <span><i class="sw g"></i>已兑现单元占比（实现循环交付）</span>
+      <span><i class="sw a" style="height:0;border-top:3px dashed var(--amber);background:none"></i>兑现阈值 80%</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 步骤 ============ -->
+<section id="steps" class="reveal">
+  <span class="kicker amber">流程明细</span>
+  <h2>八步流程</h2>
+  <p class="sub">① ~ ⑤ 属于需求分析循环，⑥ ~ ⑧ 属于需求实现循环；两个循环通过账本衔接、交替推进。</p>
+  <div class="loops">
+    <div class="loop-col b">
+      <h3><span class="pill b">循环一</span>需求分析循环</h3>
+      <div class="step"><div class="num">1</div><div><b>列出原始需求</b><p>列出原始需求，要求 agent 实现需求。</p><span class="meta">阶段：原始需求</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>读代码 · 建立账本</b><p>agent 阅读代码和需求，对需求做拆解与可行性分析，建立账本（可兑现程度初始化）。</p><span class="meta">阶段：原始需求 → 读代码</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>反问用户</b><p>agent 发现阻塞性问题，向用户提问征求意见。</p><span class="meta">阶段：读代码 → 反问用户</span></div></div>
+      <div class="step"><div class="num">4</div><div><b>回应 · 更新账本</b><p>用户回应后回到步骤 2，agent 判断合理性、更新账本（可兑现程度逐渐上升）。</p><span class="meta">阶段：反问用户 → 阅读代码 / 更新账本</span></div></div>
+      <div class="step"><div class="num">5</div><div><b>达到临界 · 确认实现</b><p>重复 2~4，直到一部分可兑现单元达到阈值，向用户征求意见开始实现（可兑现程度达到临界）。</p><span class="meta">阶段：反问用户 → 回到账本</span></div></div>
+    </div>
+    <div class="loop-col a">
+      <h3><span class="pill a">循环二</span>需求实现循环</h3>
+      <div class="step"><div class="num">6</div><div><b>写代码 · 自测 · 交付</b><p>agent 实现切片并完成自测，向用户交付。</p><span class="meta">阶段：账本 → 写代码 → 反问用户</span></div></div>
+      <div class="step"><div class="num">7</div><div><b>用户测试</b><p>用户测试：通过则进入步骤 8；未通过则回到步骤 6 继续实现。</p><span class="meta">阶段：反问用户 → 写代码 / 回到账本</span></div></div>
+      <div class="step"><div class="num">8</div><div><b>更新账本 · 标记兑现</b><p>用户测试通过后，agent 根据切片范围更新账本：可兑现单元交付完成、已经兑现。</p><span class="meta">阶段：反问用户 → 更新账本</span></div></div>
+      <div class="finale" style="margin-top:22px">重复「需求分析 → 需求实现」双循环，<br>直到整个 Story 的所有单元<span class="g">全部兑现 ✓</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>双循环交付方案 · 单页演示文稿 · 账本驱动的可兑现单元管理</footer>
+</main>
+
+<script>
+/* ==================================================================
+   双循环 SVG 流程图
+================================================================== */
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('loopSvg');
+const polar = (cx,cy,r,deg)=>{const a=deg*Math.PI/180;return [cx+r*Math.cos(a), cy+r*Math.sin(a)];};
+const f = n => Math.round(n*10)/10;
+
+function el(name, attrs, parent){
+  const e = document.createElementNS(NS, name);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  (parent||svg).appendChild(e);
+  return e;
+}
+function arcPath(cx,cy,r,a0,a1){
+  const [x0,y0]=polar(cx,cy,r,a0), [x1,y1]=polar(cx,cy,r,a1);
+  const large = Math.abs(a1-a0)>180 ? 1 : 0;
+  const sweep = a1>a0 ? 1 : 0;               // y 轴向下：正角度 = 视觉顺时针
+  return `M ${f(x0)} ${f(y0)} A ${r} ${r} 0 ${large} ${sweep} ${f(x1)} ${f(y1)}`;
+}
+
+/* ---------- defs：箭头 ---------- */
+const defs = el('defs',{});
+[['arB','#38bdf8'],['arA','#fbbf24'],['arR','#f87171']].forEach(([id,color])=>{
+  const m = el('marker',{id, viewBox:'0 0 10 10', refX:8, refY:5, markerWidth:6.5, markerHeight:6.5, orient:'auto-start-reverse'}, defs);
+  el('path',{d:'M0,0 L10,5 L0,10 z', fill:color}, m);
+});
+
+const LC = {x:390, y:380, r:250};   // 左循环（分析）
+const RC = {x:890, y:380, r:250};   // 右循环（实现）
+
+/* ---------- 循环标题 / 说明 ---------- */
+function text(x,y,str,cls,anchor,parent){
+  const t = el('text',{x, y, class:cls, 'text-anchor':anchor||'middle'}, parent);
+  t.textContent = str; return t;
+}
+text(LC.x, 40, '循环一 · 需求分析循环', 'loop-title').setAttribute('fill','#38bdf8');
+text(RC.x, 40, '循环二 · 需求实现循环', 'loop-title').setAttribute('fill','#fbbf24');
+text(LC.x, 726, '② ~ ④ 多轮迭代 · 可兑现程度逐渐上升直至临界', 'cap-txt');
+text(RC.x, 726, '⑥ ~ ⑧ 切片交付 · 直至 Story 全部单元兑现', 'cap-txt');
+
+/* ---------- 背景引导圆环 ---------- */
+[LC,RC].forEach(c=>{
+  el('circle',{cx:c.x, cy:c.y, r:c.r, fill:'none', stroke:'rgba(148,163,184,.10)','stroke-width':1.4,'stroke-dasharray':'3 7'});
+});
+
+/* ---------- 弧线（流动方向带箭头） ---------- */
+const arcDefs = [
+  {key:'A',  c:LC, a0:-20, a1:-62,  cls:'blue',  mk:'arB'},
+  {key:'B',  c:LC, a0:242, a1:191,  cls:'blue',  mk:'arB'},
+  {key:'C',  c:LC, a0:169, a1:118,  cls:'blue',  mk:'arB'},
+  {key:'D',  c:LC, a0:62,  a1:20,   cls:'blue',  mk:'arB'},
+  {key:'E1', c:RC, a0:200, a1:242,  cls:'amber', mk:'arA'},
+  {key:'E2', c:RC, a0:298, a1:349,  cls:'amber', mk:'arA'},
+  {key:'E3', c:RC, a0:371, a1:422,  cls:'amber', mk:'arA'},
+  {key:'E4', c:RC, a0:478, a1:520,  cls:'amber', mk:'arA'},
+];
+const arcEls = {};
+arcDefs.forEach(d=>{
+  arcEls[d.key] = el('path',{
+    d:arcPath(d.c.x,d.c.y,d.c.r,d.a0,d.a1),
+    class:'arc '+d.cls, 'marker-end':`url(#${d.mk})`
+  });
+});
+
+/* ---------- 弧线标签 ---------- */
+function arcLabel(c, deg, rr, str, anchor, cls){
+  const [x,y] = polar(c.x,c.y,rr,deg);
+  return text(f(x), f(y), str, cls||'arc-label', anchor);
+}
+arcLabel(LC, -41,   310, '输入需求');
+arcLabel(LC, 216.5, 310, '拆解 · 可行性分析');
+arcLabel(LC, 143.5, 310, '发现阻塞 · 提问');
+arcLabel(RC, 323.5, 310, '自测通过 · 交付');
+arcLabel(RC, 36.5,  310, '测试通过');
+(function(){ // ④：左下 → 账本（两行）
+  const t = el('text',{x:606, y:576, class:'arc-label2','text-anchor':'end'});
+  el('tspan',{x:606, y:576},t).textContent = '④ 用户回应 · 更新账本';
+  el('tspan',{x:606, y:595},t).textContent = '可兑现程度 ↑';
+})();
+(function(){ // E4：⑧ → 账本
+  const t = el('text',{x:674, y:582, class:'arc-label2','text-anchor':'start'});
+  t.setAttribute('fill','#34d399');
+  el('tspan',{x:674, y:582},t).textContent = '兑现完成';
+  el('tspan',{x:674, y:601},t).textContent = '写回账本';
+})();
+
+/* ---------- ⑤ 转换徽章（顶部中央） ---------- */
+(function(){
+  const g = el('g',{});
+  el('rect',{x:452, y:58, width:376, height:36, rx:18, fill:'rgba(251,191,36,.10)', stroke:'rgba(251,191,36,.55)','stroke-width':1.4}, g);
+  const t = text(640, 81, '⑤ 达到临界 · 征求用户意见 · 开始实现', '', 'middle', g);
+  t.setAttribute('fill','#fcd34d'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','700');
+})();
+
+/* ---------- 未通过 · 返工（红色虚线） ---------- */
+const failPath = el('path',{
+  d:'M 1150 342 C 1262 292, 1262 152, 1002 124',
+  class:'fail', 'marker-end':'url(#arR)'
+});
+text(1240, 230, '未通过', 'fail-label');
+text(1240, 248, '返工 ⑥', 'fail-label');
+
+/* ---------- 中央账本 ---------- */
+const ledgerG = el('g',{id:'ledgerG'});
+el('circle',{cx:640, cy:380, r:104, fill:'rgba(52,211,153,.05)', stroke:'rgba(52,211,153,.25)','stroke-width':1.2,'stroke-dasharray':'2 6'}, ledgerG);
+el('circle',{cx:640, cy:380, r:86, fill:'#0f1a2e', stroke:'rgba(148,163,184,.25)','stroke-width':1, class:'core'}, ledgerG);
+el('path',{d:arcPath(640,380,86,-90,90),  fill:'none', stroke:'#fbbf24','stroke-width':3,'stroke-linecap':'round'}, ledgerG); // 右半：实现
+el('path',{d:arcPath(640,380,86,90,270),  fill:'none', stroke:'#38bdf8','stroke-width':3,'stroke-linecap':'round'}, ledgerG); // 左半：分析
+const lt = text(640, 372, '账本', '', 'middle', ledgerG);
+lt.setAttribute('font-size','25'); lt.setAttribute('font-weight','800'); lt.setAttribute('fill','#e6edf7');
+text(640, 394, '可兑现单元集合', 'cap-txt', 'middle', ledgerG);
+[[100,'#34d399',408],[88,'#fbbf24',422],[45,'#38bdf8',436]].forEach(([v,color,y])=>{
+  el('rect',{x:590, y, width:100, height:7, rx:3.5, fill:'rgba(148,163,184,.18)'}, ledgerG);
+  el('rect',{x:590, y, width:v,   height:7, rx:3.5, fill:color}, ledgerG);
+});
+
+/* ---------- 节点 ---------- */
+const nodeDefs = [
+  {id:'n1', x:390,  y:130, badge:'1', cls:'blue',  t:'原始需求',        s:'列出需求 · 要求实现'},
+  {id:'n2', x:140,  y:380, badge:'2', cls:'blue',  t:'读代码 · 拆解',   s:'可行性分析 · 建立账本'},
+  {id:'n3', x:390,  y:630, badge:'3', cls:'blue',  t:'反问用户 ⇄ 回应', s:'消除阻塞 · 更新账本'},
+  {id:'n6', x:890,  y:130, badge:'6', cls:'amber', t:'写代码 · 实现切片', s:'完成自测 · 交付'},
+  {id:'n7', x:1140, y:380, badge:'7', cls:'amber', t:'用户测试',        s:'验证切片功能'},
+  {id:'n8', x:890,  y:630, badge:'8', cls:'amber', t:'更新账本',        s:'标记单元 · 已兑现'},
+];
+const nodeEls = {};
+nodeDefs.forEach(d=>{
+  const g = el('g',{class:'node '+d.cls, id:d.id});
+  el('rect',{class:'body', x:d.x-108, y:d.y-34, width:216, height:68, rx:16}, g);
+  el('circle',{class:'badge', cx:d.x-96, cy:d.y-30, r:15, fill:d.cls==='blue'?'#38bdf8':'#fbbf24'}, g);
+  text(d.x-96, d.y-25, d.badge, 'badge-t', 'middle', g);
+  text(d.x+8, d.y-3, d.t, 't', 'middle', g);
+  text(d.x+8, d.y+19, d.s, 's', 'middle', g);
+  nodeEls[d.id] = g;
+});
+
+/* ---------- 游标（播放动画） ---------- */
+const dot = el('circle',{r:9, fill:'#fff', stroke:'#0a0f1c','stroke-width':2.5, opacity:0});
+dot.style.filter = 'drop-shadow(0 0 10px rgba(255,255,255,.9))';
+
+/* ---------- 播放控制 ---------- */
+const statusTxt = document.getElementById('statusTxt');
+const playBtn = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const route = [
+  {p:'A',  node:'n1', msg:'<b>① 列出原始需求</b> — 要求 agent 实现需求'},
+  {p:'B',  node:'n2', msg:'<b>② 读代码 · 拆解</b> — 可行性分析、建立账本（可兑现程度初始化）'},
+  {p:'C',  node:'n3', msg:'<b>③ 反问用户</b> — 发现阻塞性问题，向用户提问'},
+  {p:'D',  node:'ledger', msg:'<b>④ 回应 · 更新账本</b> — 判断合理性，可兑现程度上升'},
+  {p:'B',  node:'n2', msg:'<b>② 再次阅读代码</b> — 继续拆解剩余单元'},
+  {p:'C',  node:'n3', msg:'<b>③ 继续反问</b> — 消除剩余阻塞'},
+  {p:'D',  node:'ledger', msg:'<b>⑤ 达到临界</b> — 部分单元达到阈值，确认开始实现'},
+  {p:'E1', node:'n6', msg:'<b>⑥ 写代码 · 实现切片</b> — 从账本取出已达阈值的切片'},
+  {p:'E2', node:'n7', msg:'<b>⑦ 用户测试</b> — 切片自测完成，交付用户验证'},
+  {p:'FAIL', node:'n6', msg:'<b>⑦ 未通过</b> — 返回步骤 ⑥ 继续实现（返工）'},
+  {p:'E2', node:'n7', msg:'<b>⑥ 修复 · 重新交付</b> — 再次自测并提交用户测试'},
+  {p:'E3', node:'n8', msg:'<b>⑦ 测试通过 ✓</b> — 进入步骤 ⑧'},
+  {p:'E4', node:'ledger', msg:'<b>⑧ 更新账本</b> — 标记单元已兑现，开启下一轮双循环 →'},
+];
+const segPath = key => key==='FAIL' ? failPath : arcEls[key];
+
+function clearActive(){
+  document.querySelectorAll('.node.active').forEach(n=>n.classList.remove('active'));
+  ledgerG.classList.remove('active');
+}
+function setActive(id){
+  clearActive();
+  if(id==='ledger') ledgerG.classList.add('active');
+  else if(nodeEls[id]) nodeEls[id].classList.add('active');
+}
+function travel(path, dur){
+  return new Promise(res=>{
+    const len = path.getTotalLength();
+    const t0 = performance.now();
+    (function frame(now){
+      const k = Math.min(1, (now-t0)/dur);
+      const pt = path.getPointAtLength(k*len);
+      dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+      k<1 ? requestAnimationFrame(frame) : res();
+    })(t0);
+  });
+}
+let playing = false;
+async function play(){
+  if(playing) return;
+  playing = true; playBtn.disabled = true;
+  dot.setAttribute('opacity', 1);
+  clearActive();
+  for(const seg of route){
+    statusTxt.innerHTML = seg.msg;
+    setActive(seg.node);
+    await travel(segPath(seg.p), seg.p==='FAIL' ? 800 : 950);
+    await new Promise(r=>setTimeout(r, 180));
+  }
+  statusTxt.innerHTML = '<b>✓ 一轮双循环完成</b> — 账本中已兑现单元增加；重复双循环，直到 Story 全部兑现。';
+  dot.setAttribute('opacity', 0);
+  playing = false; playBtn.disabled = false;
+}
+function reset(){
+  clearActive();
+  dot.setAttribute('opacity', 0);
+  statusTxt.textContent = '待命 — 点击播放，观看双循环如何围绕账本运转。';
+}
+playBtn.addEventListener('click', play);
+resetBtn.addEventListener('click', reset);
+
+/* ==================================================================
+   可兑现程度走势图
+================================================================== */
+(function(){
+  const cs = document.getElementById('chartSvg');
+  const P = {l:64, r:1136, t:44, b:392};              // 绘图区
+  const X = v => P.l + (P.r-P.l) * v/13;              // 轮次 0..13
+  const Y = v => P.b - (P.b-P.t) * v/100;             // 百分比 0..100
+  const cel = (n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);cs.appendChild(e);return e;};
+  const ctxt = (x,y,s,cls,anchor)=>{const t=cel('text',{x,y,class:cls,'text-anchor':anchor||'middle'});t.textContent=s;return t;};
+
+  /* 相位背景带：分析 / 实现 交替 */
+  const bands = [
+    [0,4,'分析循环 ①','rgba(56,189,248,.075)','#38bdf8'],
+    [4,5,'实现 ①','rgba(251,191,36,.10)','#fbbf24'],
+    [5,8,'分析循环 ②','rgba(56,189,248,.075)','#38bdf8'],
+    [8,9,'实现 ②','rgba(251,191,36,.10)','#fbbf24'],
+    [9,12,'分析循环 ③','rgba(56,189,248,.075)','#38bdf8'],
+    [12,13,'实现 ③','rgba(251,191,36,.10)','#fbbf24'],
+  ];
+  bands.forEach(([x0,x1,label,fill,color])=>{
+    cel('rect',{x:X(x0), y:P.t, width:X(x1)-X(x0), height:P.b-P.t, fill});
+    ctxt((X(x0)+X(x1))/2, P.t+20, label, 'band-label').setAttribute('fill', color);
+  });
+
+  /* 网格与坐标轴 */
+  [0,25,50,75,100].forEach(v=>{
+    cel('line',{x1:P.l, x2:P.r, y1:Y(v), y2:Y(v), class:v===0?'axis':'grid'});
+    ctxt(P.l-12, Y(v)+4, v+'%', 'tick', 'end');
+  });
+  for(let i=0;i<=13;i++){
+    cel('line',{x1:X(i), x2:X(i), y1:P.b, y2:P.b+5, class:'axis'});
+    ctxt(X(i), P.b+20, i, 'tick');
+  }
+  cel('line',{x1:P.l, x2:P.r, y1:P.b, y2:P.b, class:'axis'});
+  ctxt((P.l+P.r)/2, P.b+44, '迭代轮次 →', 'tick');
+  ctxt(P.l-46, P.t-12, '占比', 'tick', 'start');
+
+  /* 阈值线 80% */
+  cel('line',{x1:P.l, x2:X(12), y1:Y(80), y2:Y(80), stroke:'#fbbf24','stroke-width':2,'stroke-dasharray':'8 7', opacity:.85});
+  ctxt(X(12)-6, Y(80)-10, '兑现阈值 80%', 'band-label', 'end').setAttribute('fill','#fbbf24');
+
+  /* 蓝线：可兑现程度（分析循环 · 锯齿爬升） */
+  const blue = [15,34,58,86,88,42,64,90,90,46,74,95,95];
+  const bPts = blue.map((v,i)=>[X(i),Y(v)]);
+  cel('path',{d:'M '+bPts.map(p=>p.map(n=>Math.round(n)).join(' L ')).join(' '), fill:'none',
+    stroke:'#38bdf8','stroke-width':3,'stroke-linejoin':'round','stroke-linecap':'round'});
+  bPts.forEach(([x,y],i)=>{
+    cel('circle',{cx:x, cy:y, r:4.2, fill:'#0a0f1c', stroke:'#38bdf8','stroke-width':2.4});
+  });
+  ctxt(X(3), Y(86)-16, '达到临界', 'band-label').setAttribute('fill','#7dd3fc');
+  ctxt(X(5)+4, Y(42)+26, '新批次初始化', 'tick');
+
+  /* 绿阶梯：已兑现单元占比（实现循环交付） */
+  const green = [[0,0],[4,0],[5,30],[8,30],[9,60],[12,60],[13,100]];
+  let d = `M ${X(0)} ${Y(0)}`;
+  for(let i=1;i<green.length;i++){
+    const [px,] = green[i-1], [cx,cv] = green[i];
+    d += ` L ${X(cx)} ${Y(px)} L ${X(cx)} ${Y(cv)}`;   // 阶梯
+  }
+  cel('path',{d: d + ` L ${X(13)} ${Y(0)} Z`, fill:'rgba(52,211,153,.10)', stroke:'none'});
+  cel('path',{d, fill:'none', stroke:'#34d399','stroke-width':3.2,'stroke-linejoin':'round'});
+  green.forEach(([gx,gv])=>{
+    cel('circle',{cx:X(gx), cy:Y(gv), r:4.2, fill:'#0a0f1c', stroke:'#34d399','stroke-width':2.4});
+  });
+  /* 终点标注 */
+  cel('circle',{cx:X(13), cy:Y(100), r:9, fill:'none', stroke:'#34d399','stroke-width':2, opacity:.6});
+  ctxt(X(13)-8, Y(100)-16, 'Story 全部兑现 · 100%', 'band-label', 'end').setAttribute('fill','#34d399');
+})();
+
+/* ==================================================================
+   滚动显现 + 账本进度条动画
+================================================================== */
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('on');
+      e.target.querySelectorAll('.bar i').forEach(b=>{ b.style.width = b.dataset.w + '%'; });
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

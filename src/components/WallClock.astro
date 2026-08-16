@@ -1,8 +1,9 @@
 ---
 // Minimal wall clock. Hands are rotated to the live system time by the script.
-// Decorative mechanics: a balance wheel (three spokes, inward-facing teeth)
-// oscillates harmonically, and an outer gear with three spokes steps
-// clockwise at a steady 3° per 100ms.
+// Decorative mechanics: a middle gear (three spokes, inward-facing teeth)
+// steps clockwise one tooth per second with an escapement motion — a
+// locked crawl that releases into an accelerating snap — and an outer
+// gear with three spokes steps clockwise at a steady 3° per 100ms.
 //
 // viewBox 200×200 (center 100,100): the face keeps r=56 while the gear
 // assembly wraps it — outer teeth reach r=88. --clock-size in index.astro
@@ -11,13 +12,14 @@
 
 <div class="clock" role="img" aria-label="与当前时间同步的时钟">
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <!-- Balance wheel (middle) — three spokes + ring with INWARD-facing
-         teeth (an internal ring gear: the solid band sits on the outer
-         edge, the dashed teeth on the inner edge point at the hub — the
-         opposite of the outer gear's outward teeth). Oscillates on a
-         harmonic swing; the spokes are covered by the face (drawn
-         later), so only the outer half shows. Offset 60° from the outer
-         gear's spokes so the two triads interleave. -->
+    <!-- Middle gear — three spokes + ring with INWARD-facing teeth (an
+         internal ring gear: the solid band sits on the outer edge, the
+         dashed teeth on the inner edge point at the hub — the opposite
+         of the outer gear's outward teeth). Steps clockwise one tooth
+         per second with an escapement snap (locked crawl, then
+         release); the spokes are covered by the face (drawn later), so
+         only the outer half shows. Offset 60° from the outer gear's
+         spokes so the two triads interleave. -->
     <g id="gear-middle">
       <circle cx="100" cy="100" r="76" fill="none" stroke="#d5d9db" stroke-width="8" opacity="0.9" />
       <!-- dasharray 5 5.7 at r=70, stroke 7 → inward teeth attached to
@@ -120,14 +122,34 @@
   const gearMiddle = document.getElementById('gear-middle');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!reduceMotion && gearOuter && gearMiddle) {
-    /* Balance wheel (middle): harmonic oscillation, 6s period, ±56°.
-       A sine gives the physical feel the user wants — slowest at the
-       endpoints (direction reversal), fastest at the equilibrium
-       midpoint — so the swing visibly accelerates and decelerates
-       every half period. The large amplitude makes the rotation
-       clearly visible around the dial. */
-    const BALANCE_AMP = 60;       // degrees
-    const BALANCE_PERIOD = 12000;  // ms
+    /* Middle gear — escapement stepping: one tooth per second,
+       clockwise. A real gear train doesn't sweep — it locks, then
+       releases with a snap. Each 1s step is split into
+         - a locked phase (~55% of the step): the gear barely creeps
+           forward while the train builds torque (slow, reluctant
+           motion before the release),
+         - a release phase: an accelerating easeIn that snaps the gear
+           onto the next tooth.
+       The step count comes from the world clock, so the click lands
+       on the same boundary as the second hand's tick. */
+    const STEP_MS = 1000;  // one step per second
+    const DWELL = 0.55;    // locked fraction of each step
+    const CREEP = 0.06;    // fraction of a pitch crawled while locked
+
+    /* One tooth pitch of the middle gear's internal ring — derived
+       from the dasharray (5 + 5.7 units at r=70), so each step lands
+       the teeth exactly back on the painted pattern. ≈8.76°. */
+    const TOOTH_PITCH_DEG = (360 * 10.7) / (2 * Math.PI * 70);
+
+    /* Fraction of one pitch covered at local time t ∈ [0,1] within a
+       step: a slow linear crawl while locked, then a cubic easeIn —
+       slowest right after release, fastest right before landing, like
+       a spring letting go. */
+    const escapementProgress = (t: number): number => {
+      if (t < DWELL) return CREEP * (t / DWELL);
+      const u = (t - DWELL) / (1 - DWELL);
+      return CREEP + (1 - CREEP) * u * u * u;
+    };
 
     /* Outer ring — clean stepped escapement, no vibration. 24 teeth →
        pitch 15°. Each 100ms tick advances exactly 3° (no overshoot /
@@ -138,15 +160,19 @@
     const OUTER_STEP = 1;    // degrees per step (≠ pitch 15°)
 
     register((time) => {
-      /* Balance wheel — continuous harmonic swing. */
-      const bal = BALANCE_AMP * Math.sin((time / BALANCE_PERIOD) * Math.PI * 2);
-      gearMiddle.style.transform = `rotate(${bal.toFixed(2)}deg)`;
+      /* Middle gear — escapement step. Kept under 360° (the tooth
+         pattern is pitch-periodic, so the wrap is invisible) to keep
+         the transform string small and exact. */
+      const step = Math.floor(time / STEP_MS);
+      const t = (time % STEP_MS) / STEP_MS;
+      const ang = ((step + escapementProgress(t)) * TOOTH_PITCH_DEG) % 360;
+      gearMiddle.style.transform = `rotate(${ang.toFixed(3)}deg)`;
 
       /* Outer ring — steady 3° step every 100ms, kept under 360° so
          the transform string stays small and exact. */
       const steps = Math.floor(time / OUTER_TICK);
-      const ang = ((steps % 360) * OUTER_STEP) % 360;
-      gearOuter.style.transform = `rotate(${ang.toFixed(2)}deg)`;
+      const angOuter = ((steps % 360) * OUTER_STEP) % 360;
+      gearOuter.style.transform = `rotate(${angOuter.toFixed(2)}deg)`;
     });
   }
 </script>
