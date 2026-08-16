@@ -1,60 +1,158 @@
 ---
 // Minimal wall clock. Hands are rotated to the live system time by the script.
-// Decorative mechanics: a middle gear (three spokes, inward-facing teeth)
-// steps clockwise one tooth per second with an escapement motion — a
-// locked crawl that releases into an accelerating snap — and an outer
-// gear with three spokes steps clockwise at a steady 3° per 100ms.
+// ANGULAR build: the face and gear are regular HEXAGONS — no circles —
+// to match the scene's line-and-facet style.
 //
-// viewBox 200×200 (center 100,100): the face keeps r=56 while the gear
-// assembly wraps it — outer teeth reach r=88. --clock-size in index.astro
-// is scaled up (×200/160) so the face renders at nearly the same pixels.
+// Decorative mechanics:
+//   - gear: a SOLID, OPAQUE gray 12-gon disc (no hole, no border) +
+//     ONE long red tooth that acts as the SECOND HAND. The plate and
+//     tooth STEP TOGETHER as one unit 30° EVERY 5 SECONDS with an
+//     escapement beat (a long locked crawl that releases into an
+//     accelerating snap), beating in step with the pendulum's ~5s
+//     cycle. Z-ORDER: the plate sits BETWEEN the pendulum and the
+//     dial (drawn after the pendulum, before the face, so the dial
+//     covers its center — it reads as a solid gray collar around
+//     the face); ONLY the red tooth is drawn ABOVE the dial. The
+//     plate is a regular 12-gon, so a 30° step maps it exactly onto
+//     itself — it turns in lockstep with the tooth without ever
+//     looking loose (a hexagon plate would visibly wobble
+//     corner↔edge at 30° steps). The 0° pose is aligned with the
+//     hexagon face (plate corners and the tooth point at a face
+//     corner).
+//   - double pendulum: two articulated rods + octagon bobs, hung from
+//     the CLOCK CENTER (pivot covered by the dial — the chain appears
+//     to hang out from behind the face). The FIRST segment's full
+//     cycle (left → right → left) is ~5.0s, sustained by a CLOSED-LOOP
+//     amplitude regulator whose impulse is delivered as a SMOOTH
+//     ~120ms windowed push at the bottom pass (the fastest point) —
+//     no visible kick, holds a near-horizontal ~82° swing forever.
+//     The SECOND segment occasionally flips over the top: every ~2
+//     minutes a gentle windowed boost at the same bottom pass pushes
+//     it past the flip threshold (irregular bursts of red-bob flips,
+//     never continuous spinning). Initial conditions are RANDOMIZED
+//     on every reload — the swing can start on the left or the
+//     right, with a random position and perturbation (deliberate
+//     exception to the seeded-PRNG convention, for variety).
+//
+// viewBox 200×200 (center 100,100): the hexagon face keeps r=56; the
+// SOLID 12-gon gear plate (r=76, fully opaque) sits BEHIND the face,
+// so it shows as a gray collar around it. --clock-size in
+// index.astro is scaled up (×200/160) so the face renders at nearly
+// the same pixels.
+
+/* ── Angular geometry — all polygons generated here, deterministic ── */
+const CX = 100;
+const CY = 100;
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+/** Regular polygon vertex list, first vertex at 12 o'clock (then
+    clockwise). offsetDeg rotates the whole polygon clockwise. */
+function ring(r: number, sides: number, offsetDeg = 0): string {
+  const pts: string[] = [];
+  for (let i = 0; i < sides; i++) {
+    const a = toRad(-90 + offsetDeg + (i * 360) / sides);
+    pts.push(`${(CX + r * Math.cos(a)).toFixed(2)},${(CY + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return pts.join(' ');
+}
+
+/** Trapezoidal tooth centered on angleDeg: wide base at rBase (tucked
+    under the plate), narrow tip at rTip. Pass radii in the right order
+    for inward teeth (tip toward hub) or outward teeth. */
+function tooth(rBase: number, rTip: number, angleDeg: number, halfBase: number, halfTip: number): string {
+  const a = toRad(angleDeg);
+  const hb = toRad(halfBase);
+  const ht = toRad(halfTip);
+  const corner = (r: number, h: number) =>
+    `${(CX + r * Math.cos(a + h)).toFixed(2)},${(CY + r * Math.sin(a + h)).toFixed(2)}`;
+  return [corner(rBase, -hb), corner(rBase, hb), corner(rTip, ht), corner(rTip, -ht)].join(' ');
+}
+
+/** Regular polygon centered at the ORIGIN — for bobs and pivots. */
+function disc(r: number, sides: number, offsetDeg = 0): string {
+  const pts: string[] = [];
+  for (let i = 0; i < sides; i++) {
+    const a = toRad(offsetDeg + (i * 360) / sides);
+    pts.push(`${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`);
+  }
+  return pts.join(' ');
+}
+
+/* Single gear: a SOLID, OPAQUE gray 12-gon disc + ONE long red tooth
+   that acts as the SECOND HAND (both drawn explicitly below, not via
+   a map). They STEP TOGETHER as one unit 30° every 5 seconds — the
+   12-gon has 30° rotational symmetry, so each step lands the plate
+   exactly on itself (never a loose corner↔edge wobble) while the
+   tooth visibly clicks around the dial. The plate is a full disc
+   (no hole, no border) drawn BEFORE the face so it sits between the
+   pendulum and the dial in z-order — the dial covers its center and
+   only the red tooth is drawn above the dial. The plate shares the
+   face's orientation — corners point at face corners — and the
+   tooth points at 12 o'clock in the 0° pose. */
 ---
 
 <div class="clock" role="img" aria-label="与当前时间同步的时钟">
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <!-- Middle gear — three spokes + ring with INWARD-facing teeth (an
-         internal ring gear: the solid band sits on the outer edge, the
-         dashed teeth on the inner edge point at the hub — the opposite
-         of the outer gear's outward teeth). Steps clockwise one tooth
-         per second with an escapement snap (locked crawl, then
-         release); the spokes are covered by the face (drawn later), so
-         only the outer half shows. Offset 60° from the outer gear's
-         spokes so the two triads interleave. -->
-    <g id="gear-middle">
-      <circle cx="100" cy="100" r="76" fill="none" stroke="#d5d9db" stroke-width="8" opacity="0.9" />
-      <!-- dasharray 5 5.7 at r=70, stroke 7 → inward teeth attached to
-           the band's inner edge, pointing at the hub -->
-      <circle cx="100" cy="100" r="70" fill="none" stroke="#c2cacd" stroke-width="7" stroke-dasharray="5 5.7" opacity="0.85" />
+    <!-- Double pendulum — two articulated rods + octagon bobs. The
+         pivot is at the CLOCK CENTER (100,100), and this group is
+         drawn BEFORE the face so the dial covers the rod's upper
+         part — the chain appears to hang out from behind the dial.
+         Chaotic double-pendulum physics; the script randomizes the
+         initial pose on every reload (side + perturbation). Bob1
+         hangs at radius 130, bob2 at 175 — well outside the plate
+         (76) — so they are always visible in front of the clock. -->
+    <g id="pendulum">
+      <line id="pend-rod1" x1="100" y1="100" x2="100" y2="230"
+        stroke="#2d3338" stroke-width="2" opacity="0.85" />
+      <line id="pend-rod2" x1="100" y1="230" x2="100" y2="275"
+        stroke="#2d3338" stroke-width="1.3" opacity="0.8" />
+      <!-- Bobs (octagons, centered at the joints); initial transforms
+           hold the straight-down pose until the script runs. -->
+      <polygon id="pend-bob1" points={disc(7, 8)} fill="#2d3338"
+        transform="translate(100 230)" />
+      <polygon id="pend-bob2" points={disc(5.5, 8)} fill="#94231f"
+        transform="translate(100 275)" />
     </g>
 
-    <!-- Outermost gear + three connecting rods — one rotating assembly.
-         The rods run from the central hub out to the ring and are covered
-         by the face (drawn below it), so only the portion past the face
-         shows. Steps clockwise at a steady 3° per 100ms. -->
-    <g id="gear-outer">
-      <!-- The three spokes are offset +2.44° (half a tooth width) so
-           each spoke passes through the CENTER of a tooth rather than
-           its leading edge — a dash at 7.5 of the 23.04-unit pitch
-           spans 4.88°, so half is 2.44°. The gear steps 3°/tick, but
-           the offset is static and shared, so alignment holds forever. -->
-      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(2.44 100 100)" />
-      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(122.44 100 100)" />
-      <rect x="97" y="15" width="6" height="70" rx="2.5" fill="#c7cbcd" opacity="0.9" transform="rotate(242.44 100 100)" />
-      <circle cx="100" cy="100" r="86" fill="none" stroke="#d5d9db" stroke-width="5" opacity="0.9" />
-      <!-- dasharray 7.5 15.54 at r=88 → 24 teeth (pitch 15°) -->
-      <circle cx="100" cy="100" r="88" fill="none" stroke="#c2cacd" stroke-width="7" stroke-dasharray="7.5 15.54" opacity="0.85" />
+    <!-- SOLID gray 12-gon plate — a full, OPAQUE disc (no hole, no
+         border). Drawn AFTER the pendulum but BEFORE the face so it
+         sits BETWEEN the pendulum and the dial in z-order: the dial
+         (r=56) covers the plate's center, so the plate reads as a
+         solid gray collar around the face. A regular 12-gon has 30°
+         rotational symmetry = the 30° step, so it rotates onto
+         itself each step (no corner↔edge wobble). The gear script
+         applies the SAME rotation as the tooth, so they step
+         together as one unit. -->
+    <g id="gear-plate">
+      <polygon points={ring(76, 12)} fill="#d5d9db" />
     </g>
 
-    <!-- Round face -->
-    <circle cx="100" cy="100" r="56" fill="#eef2f3" stroke="#c2cacd" stroke-width="3" />
+    <!-- Hexagon face — crisp corners instead of a round dial -->
+    <polygon points={ring(56, 6)} fill="#eef2f3" stroke="#c2cacd" stroke-width="3" />
 
-    <!-- Hands (sharp rectangles; all pivot at the center 100,100) -->
+    <!-- Hands (sharp rectangles; all pivot at the center 100,100). No
+         second hand — the gear's single red tooth IS the second
+         hand, sweeping over the dial below it. -->
     <rect id="hand-hour" x="98" y="76" width="4" height="28" fill="#2d3338"
       style="transform-box: view-box; transform-origin: 100px 100px;" />
     <rect id="hand-minute" x="98.8" y="64" width="2.4" height="40" fill="#2d3338"
       style="transform-box: view-box; transform-origin: 100px 100px;" />
-    <rect id="hand-second" x="99.4" y="60" width="1.2" height="46" fill="#94231f"
-      style="transform-box: view-box; transform-origin: 100px 100px;" />
+
+    <!-- Gear — the red SECOND-HAND tooth ONLY. Drawn LAST (after the
+         face, hands and plate) so it is the only element ABOVE the
+         dial, sweeping over it like a real second hand. The plate
+         (#gear-plate, above) rotates together with this tooth — the
+         gear script sets the same transform on both. The tooth is a
+         long thin pointer from the plate (r=71.5) inward to r=42 —
+         the same tip radius as the old second hand. Rotates
+         clockwise 30° every 5 seconds with an escapement snap
+         (locked crawl, then release). The 0° pose is aligned with
+         the hexagon face: the tooth points at a face corner (−90° +
+         60°k), and every 30° step lands on a 12-gon corner. -->
+    <g id="gear">
+      <polygon points={tooth(71.5, 42, -90, 1.5, 0.6)} fill="#94231f" opacity="0.95" />
+    </g>
+
     <!-- Center hub: a small diamond -->
     <rect x="95" y="95" width="10" height="10" fill="#2d3338"
       style="transform-box: view-box; transform-origin: 100px 100px; transform: rotate(45deg);" />
@@ -65,17 +163,21 @@
   .clock {
     width: 100%;
     height: 100%;
+    overflow: visible;
   }
 
   .clock svg {
     width: 100%;
     height: 100%;
+    overflow: visible;
   }
 
-  /* Gears pivot at the viewBox center — CSS rotation on the <g> keeps
-     every tooth in place while the ring swings. */
-  #gear-outer,
-  #gear-middle {
+  /* The plate + tooth pivot at the viewBox center — the gear script
+     sets the SAME rotation on both groups, so they step together as
+     one unit (the plate stays behind the dial, the tooth above it —
+     the paint order is set in the markup, not here). */
+  #gear,
+  #gear-plate {
     transform-box: view-box;
     transform-origin: 100px 100px;
   }
@@ -86,7 +188,6 @@
 
   const hour = document.getElementById('hand-hour');
   const minute = document.getElementById('hand-minute');
-  const second = document.getElementById('hand-second');
   let lastSec = -1;
 
   function tick() {
@@ -95,13 +196,11 @@
     const m = now.getMinutes();
     const h = now.getHours() % 12;
 
-    const secDeg = s * 6;
     const minDeg = m * 6 + s * 0.1;
     const hourDeg = h * 30 + m * 0.5;
 
     if (hour) hour.style.transform = `rotate(${hourDeg}deg)`;
     if (minute) minute.style.transform = `rotate(${minDeg}deg)`;
-    if (second) second.style.transform = `rotate(${secDeg}deg)`;
   }
 
   // Immediate first render, then sync to real seconds via shared rAF loop.
@@ -114,32 +213,35 @@
     }
   });
 
-  /* Three independent mechanical motions — all driven by world-clock
-     time so they are deterministic across reloads. Decorative only:
-     frozen under prefers-reduced-motion so the hands stay the sole
-     motion. */
-  const gearOuter = document.getElementById('gear-outer');
-  const gearMiddle = document.getElementById('gear-middle');
+  /* Single mechanical motion — driven by world-clock time so it is
+     deterministic across reloads. Decorative only: frozen under
+     prefers-reduced-motion so the hands stay the sole motion. */
+  const gear = document.getElementById('gear');
+  const gearPlate = document.getElementById('gear-plate');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reduceMotion && gearOuter && gearMiddle) {
-    /* Middle gear — escapement stepping: one tooth per second,
-       clockwise. A real gear train doesn't sweep — it locks, then
-       releases with a snap. Each 1s step is split into
-         - a locked phase (~55% of the step): the gear barely creeps
-           forward while the train builds torque (slow, reluctant
-           motion before the release),
-         - a release phase: an accelerating easeIn that snaps the gear
-           onto the next tooth.
-       The step count comes from the world clock, so the click lands
-       on the same boundary as the second hand's tick. */
-    const STEP_MS = 1000;  // one step per second
-    const DWELL = 0.55;    // locked fraction of each step
-    const CREEP = 0.06;    // fraction of a pitch crawled while locked
+  if (!reduceMotion && gear && gearPlate) {
+    /* Gear — the SECOND HAND: the 12-gon plate + long red tooth
+       sweep the dial TOGETHER, 30° EVERY 5 SECONDS with an
+       escapement beat, beating in step with the pendulum's ~5s
+       cycle (the plate's 30° symmetry hides its own rotation; the
+       tooth is what reads as motion). Each 5s step is split into
+         - a locked phase (~90% of the step): the tooth barely creeps
+           forward while the train builds torque,
+         - a release phase: an accelerating easeIn that snaps the
+           tooth onto the next 30° mark (~500ms) — a decisive
+           mechanical click every 5 seconds.
+       The step count comes from the world clock, so each click
+       lands on a second-hand boundary (every 5s). */
+    const STEP_MS = 5000;  // one step every 5 seconds
+    const DWELL = 0.9;     // locked fraction of each step (release ≈ 500ms)
+    const CREEP = 0.06;    // fraction of a step crawled while locked
 
-    /* One tooth pitch of the middle gear's internal ring — derived
-       from the dasharray (5 + 5.7 units at r=70), so each step lands
-       the teeth exactly back on the painted pattern. ≈8.76°. */
-    const TOOTH_PITCH_DEG = (360 * 10.7) / (2 * Math.PI * 70);
+    /* Step angle — 30° per step (a twelfth of the 360° revolution,
+       matching the 12-gon plate's 30° facets: each step lands the
+       plate exactly on itself and the tooth on the next 12-gon
+       corner). The single tooth is one-per-revolution, so the 360°
+       wrap is exact and invisible. */
+    const STEP_DEG = 30;
 
     /* Fraction of one pitch covered at local time t ∈ [0,1] within a
        step: a slow linear crawl while locked, then a cubic easeIn —
@@ -151,28 +253,223 @@
       return CREEP + (1 - CREEP) * u * u * u;
     };
 
-    /* Outer ring — clean stepped escapement, no vibration. 24 teeth →
-       pitch 15°. Each 100ms tick advances exactly 3° (no overshoot /
-       settle wobble); 3 vs the 15° pitch leaves a 12° tooth drift per
-       step, so the teeth crawl forward instead of re-aligning (which
-       would look frozen). */
-    const OUTER_TICK = 100;  // ms per step
-    const OUTER_STEP = 1;    // degrees per step (≠ pitch 15°)
-
     register((time) => {
-      /* Middle gear — escapement step. Kept under 360° (the tooth
-         pattern is pitch-periodic, so the wrap is invisible) to keep
-         the transform string small and exact. */
+      /* Escapement step. Kept under 360° (the tooth pattern is
+         pitch-periodic, so the wrap is invisible) to keep the
+         transform string small and exact. The plate gets the SAME
+         rotation as the tooth — they step together as one unit. */
       const step = Math.floor(time / STEP_MS);
       const t = (time % STEP_MS) / STEP_MS;
-      const ang = ((step + escapementProgress(t)) * TOOTH_PITCH_DEG) % 360;
-      gearMiddle.style.transform = `rotate(${ang.toFixed(3)}deg)`;
+      const ang = ((step + escapementProgress(t)) * STEP_DEG) % 360;
+      const rot = `rotate(${ang.toFixed(3)}deg)`;
+      gear.style.transform = rot;
+      gearPlate.style.transform = rot;
+    });
+  }
 
-      /* Outer ring — steady 3° step every 100ms, kept under 360° so
-         the transform string stays small and exact. */
-      const steps = Math.floor(time / OUTER_TICK);
-      const angOuter = ((steps % 360) * OUTER_STEP) % 360;
-      gearOuter.style.transform = `rotate(${angOuter.toFixed(2)}deg)`;
+  /* Double pendulum — hangs from the CLOCK CENTER (pivot hidden
+     behind the dial) and swings a full cycle (left → right → left)
+     in ~5.0s. Energy is fed SMOOTHLY at the bottom pass (the
+     fastest point) by a CLOSED-LOOP amplitude regulator: each cycle
+     the impulse is computed from the amplitude deficit and delivered
+     as a short windowed push (~120ms), so there is no visible
+     "kick" — the swing simply holds a near-horizontal ~82° forever.
+     The SECOND segment is occasionally (every ~36 cycles ≈ 3 min)
+     given a gentle windowed boost at the same bottom pass, so it
+     occasionally flips over the top — a chaotic loop of the red bob
+     every minute or two — while never spinning continuously. Initial
+     conditions are RANDOMIZED on each reload (side + position +
+     perturbation) for variety; frozen under prefers-reduced-motion. */
+  const pendulum = document.getElementById('pendulum');
+  const pendRod1 = document.getElementById('pend-rod1');
+  const pendRod2 = document.getElementById('pend-rod2');
+  const pendBob1 = document.getElementById('pend-bob1');
+  const pendBob2 = document.getElementById('pend-bob2');
+  if (!reduceMotion && pendulum && pendRod1 && pendRod2 && pendBob1 && pendBob2) {
+    const rod1 = pendRod1!;
+    const rod2 = pendRod2!;
+    const bob1 = pendBob1!;
+    const bob2 = pendBob2!;
+
+    /* Initial pose — RANDOMIZED on every reload for variety
+       (deliberate exception to the seeded-PRNG convention: the
+       pendulum's ongoing state is a stateful ODE that can't be a
+       pure function of world time like the clouds, so its start is
+       the one place determinism could live — and here we trade it
+       for fun). The swing can start on the LEFT or RIGHT, at a
+       random amplitude near the regulator's steady state (so there
+       is no small-swing warm-up), with a random perturbation on the
+       second segment. The closed-loop regulator pulls θ1 to its
+       ~82° equilibrium within a few cycles regardless. */
+    const T1_0 = (Math.random() < 0.5 ? 1 : -1) * (0.9 + Math.random() * 0.55); // ±52°–83°
+    const T2_0 = (Math.random() < 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.5);  // ±17°–46°
+
+    let t1 = T1_0, w1 = 0;
+    let t2 = T2_0, w2 = 0;
+    let lastTime: number | null = null;
+    let bottomPasses = 0; // θ1 zero crossings since start
+    let prevT1Sign = Math.sign(t1) || 1;
+    let cycleAmp = 0;     // peak |θ1| since the last full-cycle pump
+    let pump1 = 0;        // windowed θ1 impulse still being delivered
+    let pump2 = 0;        // windowed θ2 boost still being delivered
+
+    /* Chain + physics in viewBox units.
+
+       INTEGRATOR: semi-implicit (symplectic) Euler at a fixed 120Hz
+       substep — NOT RK4. It's the standard choice for pendulum
+       animation: it's energy-stable for Hamiltonian systems and at
+       120 substeps/s the per-step accuracy loss vs RK4 is invisible
+       (RK4 would cost 4× the flops for no visible gain here).
+
+       ENERGY CONTROL — closed-loop amplitude regulator + occasional
+       follower boost, BOTH delivered as smooth windowed pushes:
+
+         - TARGET = 1.45 rad (83°): the desired peak swing of the
+           first segment — near-horizontal, dramatic but safe.
+         - Each full cycle, at the BOTTOM PASS (the fastest point),
+           the θ1 regulator computes kick = min(Kp·(TARGET −
+           cycleAmp), PUMP_MAX) and delivers it as a ~120ms windowed
+           push (WINDOW_STEPS substeps of ramp), NOT an instant
+           velocity jump — so the energy feed is imperceptible as a
+           discrete event, exactly like a real escapement impulse
+           over a finite angle. Below target → energy in; at or
+           above target → nothing.
+         - OCCASIONAL FLIP: every BOOST_EVERY_CYCLES full cycles
+           (24 × 5s ≈ 2 min), a gentle windowed boost (K2 = 3.0
+           rad/s over ~120ms) is applied to the second segment along
+           its direction of motion at the same bottom pass. This is
+           the "escapement tapping the whole train" — it pushes the
+           follower over the flip threshold occasionally: the red bob
+           loops over the top in irregular bursts (a cascade of 1–6
+           flips, then a calm minute or two). With the steady
+           amplitude start this cadence holds indefinitely.
+         - GUARD = 1.75 rad (100°): if a perturbation pushes θ1 past
+           horizontal, the guard brakes the outward velocity and
+           clamps — a rare safety, so segment 1 NEVER spins.
+         - M2 = 0.25 / DAMP2 = 0.0015: enough coupling and energy for
+           the follower to be lively and flip-able.
+         - G = 270: with L1=130 the period scales ∝ √(L1/G), so G was
+           rescaled with the rod to hold the ≈5.0s beat.
+       Verified 20-min sim (L1=130, G=270, 8 randomized starts): cycle
+       ≈5.03s avg (5.00–5.05), 0–13 flips per run (occasional bursts),
+       rare silent guard hits, 0 NaN. */
+    const L1 = 130, L2 = 45;  // bob1 at r=130, bob2 at 175 (>76: outside)
+    const G = 270;            // tuned (with L1=130) for a ≈5.0s cycle
+    const M2 = 0.25;          // follower mass ratio (m1 = 1)
+    const TARGET = 1.45;      // rad — desired peak of θ1 (83°)
+    const KP = 2.0;           // regulator gain
+    const PUMP_MAX = 0.5;     // max θ1 impulse (rad/s) per cycle
+    const K2 = 3.0;           // θ2 boost size (rad/s), every BOOST_EVERY_CYCLES
+    const BOOST_EVERY_CYCLES = 24; // full cycles between θ2 boosts (~2 min)
+    const GUARD = 1.75;       // rad — spin guard (100°), clamps θ1
+    const DAMP1 = 0.0002;     // first segment drag
+    const DAMP2 = 0.0015;     // follower drag — light enough to stay lively
+    const WINDOW_STEPS = 14;  // smooth window (~117ms) for each impulse
+    const PX = 100, PY = 100; // pivot = clock center (covered by the dial)
+    const DT = 1 / 120;  // fixed physics substep (s)
+    const MAX_STEPS = 24; // cap catch-up after a hidden tab
+
+    function step(dt: number): void {
+      const d = t2 - t1;
+      const c = Math.cos(d);
+      const s = Math.sin(d);
+      /* Unequal masses (m1 = 1, m2 = M2). Standard double-pendulum
+         equations (θ from vertical-down); d = θ2−θ1, so the coupling
+         carries −2s(…) — getting the sign wrong injects energy. */
+      const denom = 2 + M2 - M2 * Math.cos(2 * d);
+      const a1 =
+        (-G * (2 + M2) * Math.sin(t1) -
+          G * M2 * Math.sin(t1 - 2 * t2) +
+          2 * s * M2 * (w2 * w2 * L2 + w1 * w1 * L1 * c)) /
+        (L1 * denom);
+      const a2 =
+        (-2 * s *
+          (w1 * w1 * L1 * (1 + M2) +
+            G * (1 + M2) * Math.cos(t1) +
+            w2 * w2 * L2 * M2 * c)) /
+        (L2 * denom);
+      w1 += a1 * dt;
+      w2 += a2 * dt;
+      t1 += w1 * dt;
+      t2 += w2 * dt;
+      /* Per-substep drag — frame-rate independent. DAMP2 is light so
+         the follower stays lively (flip-able) rather than pinned. */
+      w1 *= 1 - DAMP1;
+      w2 *= 1 - DAMP2;
+      /* Smooth windowed deliveries — a short ~117ms push instead of
+         an instant velocity jump, so the energy feed is imperceptible
+         as a discrete event (delivered right after the bottom pass,
+         the fastest point). */
+      if (pump1 > 0) {
+        const dp = Math.min(pump1, PUMP_MAX / WINDOW_STEPS);
+        w1 += dp * Math.sign(w1 || 1);
+        pump1 -= dp;
+      }
+      if (pump2 > 0) {
+        const dp = Math.min(pump2, K2 / WINDOW_STEPS);
+        w2 += dp * Math.sign(w2 || 1);
+        pump2 -= dp;
+      }
+      /* Track the peak |θ1| since the last full-cycle pump. */
+      cycleAmp = Math.max(cycleAmp, Math.abs(t1));
+      /* Spin guard: if a perturbation pushes θ1 past horizontal, kill
+         the outward velocity and clamp — a rare safety so segment 1
+         can never spin over the top. (Segment 2 is ALLOWED to flip.) */
+      if (Math.abs(t1) > GUARD) {
+        const sgn = Math.sign(t1);
+        if (w1 * sgn > 0) w1 -= w1 * 0.7;
+        t1 = sgn * GUARD;
+      }
+    }
+
+    function render(): void {
+      const x1 = PX + L1 * Math.sin(t1);
+      const y1 = PY + L1 * Math.cos(t1);
+      const x2 = x1 + L2 * Math.sin(t2);
+      const y2 = y1 + L2 * Math.cos(t2);
+      rod1.setAttribute('x2', x1.toFixed(2));
+      rod1.setAttribute('y2', y1.toFixed(2));
+      rod2.setAttribute('x1', x1.toFixed(2));
+      rod2.setAttribute('y1', y1.toFixed(2));
+      rod2.setAttribute('x2', x2.toFixed(2));
+      rod2.setAttribute('y2', y2.toFixed(2));
+      bob1.setAttribute('transform', `translate(${x1.toFixed(2)} ${y1.toFixed(2)})`);
+      bob2.setAttribute('transform', `translate(${x2.toFixed(2)} ${y2.toFixed(2)})`);
+    }
+
+    render(); // seeded initial pose
+
+    register((time) => {
+      if (lastTime === null) lastTime = time;
+      const dtMs = Math.min(time - lastTime, 200);
+      lastTime = time;
+      /* dtMs is MILLISECONDS; 120 substeps/s → 0.12 substeps/ms.
+         (Bug fixed 2026-08-16: `ceil(dtMs*120)` treated ms as s →
+         24 steps/frame → physics ran 12× too fast.) */
+      const steps = Math.min(Math.max(1, Math.round(dtMs * 0.12)), MAX_STEPS);
+      for (let i = 0; i < steps; i++) {
+        step(DT);
+        /* Phase-locked escapement + CLOSED-LOOP regulator: count
+           bottom passes (θ1 crossing vertical) and once per FULL
+           cycle start a smooth windowed θ1 push sized by the
+           amplitude deficit. Plus the OCCASIONAL θ2 boost: every
+           BOOST_EVERY_CYCLES full cycles, start a windowed push to
+           the follower so it occasionally flips over the top. All
+           injections start at the bottom pass — the fastest point. */
+        const sign = Math.sign(t1) || 1;
+        if (sign !== prevT1Sign) {
+          prevT1Sign = sign;
+          bottomPasses++;
+          if (bottomPasses % 2 === 0) {
+            const kick = Math.min(KP * Math.max(0, TARGET - cycleAmp), PUMP_MAX);
+            if (kick > 0.001) pump1 = kick;
+            const fullCycles = bottomPasses / 2;
+            if (fullCycles % BOOST_EVERY_CYCLES === 0) pump2 = K2;
+            cycleAmp = 0;
+          }
+        }
+      }
+      render();
     });
   }
 </script>

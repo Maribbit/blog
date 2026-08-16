@@ -54,7 +54,7 @@ const pageUrl = SITE + Astro.url.pathname;
     <slot />
     <script is:inline>
       /* Live-ticking clock favicon.
-         Draws the same round clock as the wall clock onto a small
+         Draws the same hexagon clock as the wall clock onto a small
          canvas once per minute and swaps it into <link id="favicon">,
          so the browser tab shows the time. Falls back gracefully to the
          static favicon.svg when canvas isn't available. No second hand,
@@ -71,7 +71,13 @@ const pageUrl = SITE + Astro.url.pathname;
 
         function face() {
           ctx.beginPath();
-          ctx.arc(CX, CY, R, 0, TAU);
+          for (var i = 0; i < 6; i++) {
+            var a = -Math.PI / 2 + (i * TAU) / 6;
+            var x = CX + R * Math.cos(a);
+            var y = CY + R * Math.sin(a);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
           ctx.closePath();
         }
         function hand(angle, len, w, color) {
@@ -101,7 +107,7 @@ const pageUrl = SITE + Astro.url.pathname;
 
           ctx.save();
           ctx.translate(CX, CY);
-          ctx.rotate(TAU / 8);
+          ctx.rotate(TAU / 6);
           ctx.fillStyle = '#2d3338';
           ctx.fillRect(-2.6, -2.6, 5.2, 5.2);
           ctx.restore();

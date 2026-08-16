@@ -228,10 +228,10 @@ import Desk from '../components/Desk.astro';
 
     /* Perspective math (VP, narrowing, sea horizon) lives in
        src/utils/perspective.ts — runtime JS, not CSS calc.
-       Clock assembly (face + three gear rings + spokes) uses a
+       Clock assembly (hexagon face + one 12-gon gear plate) uses a
        200-unit viewBox, so the size factor scales ×200/160
        (0.09 → ~0.1). The face renders slightly smaller than before
-       (~11%) but stays dominant, while the wider gear crown wraps it
+       (~11%) but stays dominant, while the gear plate wraps it
        without overflowing the window frame's headroom.
        The clock hangs in the top headroom (scroll bar 6px + 4px
        translateY gap), so it never crowds the window frame. */
