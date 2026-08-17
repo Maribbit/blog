@@ -107,10 +107,12 @@ function disc(r: number, sides: number, offsetDeg = 0): string {
       <line id="pend-rod2" x1="100" y1="230" x2="100" y2="275"
         stroke="#2d3338" stroke-width="1.3" opacity="0.8" />
       <!-- Bobs (octagons, centered at the joints); initial transforms
-           hold the straight-down pose until the script runs. -->
-      <polygon id="pend-bob1" points={disc(7, 8)} fill="#2d3338"
+           hold the straight-down pose until the script runs. The
+           FIRST bob is the SMALL one (r=5.5), the SECOND bob the
+           LARGE one (r=7) — swapped so the outer bob dominates. -->
+      <polygon id="pend-bob1" points={disc(5.5, 8)} fill="#2d3338"
         transform="translate(100 230)" />
-      <polygon id="pend-bob2" points={disc(5.5, 8)} fill="#94231f"
+      <polygon id="pend-bob2" points={disc(7, 8)} fill="#94231f"
         transform="translate(100 275)" />
     </g>
 
