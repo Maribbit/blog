@@ -94,9 +94,8 @@ const pageUrl = SITE + Astro.url.pathname;
           face();
           ctx.fillStyle = '#eef2f3';
           ctx.fill();
-          ctx.lineWidth = 2.5;
-          ctx.strokeStyle = '#c2cacd';
-          ctx.stroke();
+          // No border — the face is a plain filled hexagon (matches
+          // the wall clock, which has no stroke either).
 
           var now = new Date();
           var m = now.getMinutes();
